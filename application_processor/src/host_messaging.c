@@ -18,7 +18,18 @@ void recv_input(const char *msg, char *buf) {
     print_debug(msg);
     fflush(0);
     print_ack();
-    gets(buf);
+
+    // Read one character at a time until newline or EOF
+    int idx = 0, c = 0;
+    while ((c = getchar()) != '\n' && c != EOF) {
+        // UART_MAX_LEN - 1 so we can always append the null-byte later
+        buf[idx % (UART_MAX_LEN - 1)] = (char)c;
+        idx++;
+    }
+
+    // Append null-byte to end the string :)
+    buf[idx % UART_MAX_LEN] = '\0';
+
     puts("");
 }
 

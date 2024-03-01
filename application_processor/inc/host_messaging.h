@@ -18,6 +18,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// Constants
+#define UART_MAX_LEN 100
+
 // Macro definitions to print the specified format for error messages
 #define print_error(...) printf("%%error: "); printf(__VA_ARGS__); printf("%%"); fflush(stdout)
 #define print_hex_error(...) printf("%%error: "); print_hex(__VA_ARGS__); printf("%%"); fflush(stdout)
