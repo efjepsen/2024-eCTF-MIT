@@ -82,17 +82,72 @@ flash_entry flash_status;
 
 /******************************* MIT UTILITIES ********************************/
 
+// Buffers for board link communication
+uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN];
+uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
+
 int send_mit_packet(i2c_addr_t addr, mit_packet_t * packet) {
-    uint8_t len = sizeof(mit_ad_t) + sizeof(mit_authtag_t) + packet->ad.len;
+    uint8_t len = packet->ad.len + sizeof(mit_ad_t) + sizeof(mit_authtag_t);
     return send_packet(addr, len, packet);
 }
 
-void set_ad(mit_packet_t * packet, mit_opcode_t opcode, uint8_t len) {
-    packet->ad.nonce.sequenceNumber = 0;
-    packet->ad.comp_id = 0; // TODO
+void set_ad(mit_packet_t * packet, mit_comp_id_t comp_id, mit_opcode_t opcode, uint8_t len) {
+    // TODO limits check on len?
+    packet->ad.nonce.sequenceNumber = 0; // TODO
+    packet->ad.comp_id = comp_id;
     packet->ad.opcode = opcode;
     packet->ad.len = len;
-    packet->ad.for_ap = true;
+    packet->ad.for_ap = false; // TODO use ifdefs w/ AP_BOOT_MSG to resolve this in common code?
+}
+
+/**
+ * @brief Determine if component_id is valid
+ * 
+ * @param component_id: mit_comp_id_t, id of component
+ * 
+ * Returns true if component found in status structs, else false
+ */
+bool is_valid_component(mit_comp_id_t component_id) {
+    for (int i = 0; i < flash_status.component_cnt; i++) {
+        if (flash_status.component_ids[i] == component_id) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * @brief Helper for constructing packets
+ * 
+ * @param component_id: mit_comp_id_t, id of component to make packet for
+ * @param opcode: mit_opcode_t, opcode to make packet for
+ * @param data: uint8_t *, ptr for data to store in message ield
+ * @param len: uint8_t, len of data to copy into message field
+ */
+int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * data, uint8_t len) {
+    // TODO bounds check on len?
+    mit_packet_t * packet = (mit_packet_t *)transmit_buffer;
+
+    // Set Authenticated Data field
+    set_ad(packet, component_id, opcode, len);
+
+    // Nonce generation
+    // set_nonce(packet, component_id);
+
+    // Copy in data
+    // TODO encrypt data in place before copy? :-)
+    memcpy(packet->message.rawBytes, data, len);
+
+    // TODO use this instead to copy in encrypted data
+    // wc_ChaCha20Poly1305_Encrypt(
+    //     shared_key, packet->ad.nonce.rawBytes,
+    //     packet->ad.rawBytes, sizeof(mit_ad_t),
+    //     data, len,
+    //     packet->message.rawBytes, packet->authTag.rawBytes
+    // );
+
+    return 0;
 }
 
 /******************************* POST BOOT FUNCTIONALITY *********************************/
@@ -109,10 +164,8 @@ void set_ad(mit_packet_t * packet, mit_opcode_t opcode, uint8_t len) {
 */
 int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
     // TODO gross allocation
-    mit_packet_t packet;
-    memcpy(packet.message.rawBytes, buffer, len);
-    set_ad(&packet, MIT_CMD_NONE, len);
-    return send_mit_packet(address, &packet);
+    make_mit_packet(address, MIT_CMD_NONE, buffer, len);
+    return send_mit_packet(address, transmit_buffer);
 }
 
 /**
@@ -182,15 +235,17 @@ void init() {
 }
 
 // Send a command to a component and receive the result
-int issue_cmd(i2c_addr_t addr, uint8_t* transmit, uint8_t* receive) {
+int issue_cmd(mit_comp_id_t component_id) {
+    i2c_addr_t addr = component_id_to_i2c_addr((uint32_t)component_id);
+
     // Send message
-    int result = send_mit_packet(addr, (mit_packet_t *)transmit);
+    int result = send_mit_packet(addr, (mit_packet_t *)transmit_buffer);
     if (result == ERROR_RETURN) {
         return ERROR_RETURN;
     }
     
     // Receive message
-    int len = poll_and_receive_packet(addr, receive);
+    int len = poll_and_receive_packet(addr, receive_buffer);
     if (len == ERROR_RETURN) {
         return ERROR_RETURN;
     }
@@ -200,14 +255,14 @@ int issue_cmd(i2c_addr_t addr, uint8_t* transmit, uint8_t* receive) {
 /******************************** COMPONENT COMMS ********************************/
 
 int scan_components() {
+    // TODO we need to use ephemeral nonces in this section.
+    // this section differs from our normal messaging scheme, where
+    // we will only send to valid components we are provisioned for.
+
     // Print out provisioned component IDs
     for (unsigned i = 0; i < flash_status.component_cnt; i++) {
         print_info("P>0x%08x\n", flash_status.component_ids[i]);
     }
-
-    // Buffers for board link communication
-    uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN];
-    uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
 
     // Scan scan command to each component 
     for (i2c_addr_t addr = 0x8; addr < 0x78; addr++) {
@@ -217,14 +272,14 @@ int scan_components() {
             continue;
         }
 
-        // Create command message 
-        mit_packet_t * packet = (mit_packet_t *) transmit_buffer;
-        set_ad(packet, MIT_CMD_SCAN, 1);
+        // Create command message
+        uint8_t dummy = 0x55;
+        make_mit_packet(addr, MIT_CMD_SCAN, &dummy, 1);
         
         // Send out command and receive result
-        int len = issue_cmd(addr, transmit_buffer, receive_buffer);
+        int len = issue_cmd(addr);
 
-        packet = (mit_packet_t *)receive_buffer;
+        mit_packet_t * packet = (mit_packet_t *)receive_buffer;
 
         // Success, device is present
         if (len > 0) {
@@ -236,31 +291,27 @@ int scan_components() {
 }
 
 int validate_components() {
-    // Buffers for board link communication
-    uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN];
-    uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
-
     // Send validate command to each component
     for (unsigned i = 0; i < flash_status.component_cnt; i++) {
-        // Set the I2C address of the component
-        i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[i]);
+        // Get component id
+        mit_comp_id_t component_id = flash_status.component_ids[i];
 
         // Create command message
-        mit_packet_t * packet = (mit_packet_t *) transmit_buffer;
-        set_ad(packet, MIT_CMD_VALIDATE, 1);
+        uint8_t dummy = 0x55;
+        make_mit_packet(component_id, MIT_CMD_VALIDATE, &dummy, 1);
         
         // Send out command and receive result
-        int len = issue_cmd(addr, transmit_buffer, receive_buffer);
+        int len = issue_cmd(component_id);
         if (len == ERROR_RETURN) {
             print_error("Could not validate component\n");
             return ERROR_RETURN;
         }
 
-        packet = (mit_packet_t *)receive_buffer;
+        mit_packet_t * packet = (mit_packet_t *)receive_buffer;
 
         // Check that the result is correct
-        if (packet->ad.comp_id != flash_status.component_ids[i]) {
-            print_error("Component ID: 0x%08x invalid\n", flash_status.component_ids[i]);
+        if (packet->ad.comp_id != component_id) {
+            print_error("Component ID: 0x%08x invalid\n", packet->ad.comp_id);
             return ERROR_RETURN;
         }
     }
@@ -268,57 +319,48 @@ int validate_components() {
 }
 
 int boot_components() {
-    // Buffers for board link communication
-    uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN];
-    uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
-
     // Send boot command to each component
     for (unsigned i = 0; i < flash_status.component_cnt; i++) {
-        // Set the I2C address of the component
-        i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[i]);
+        // Get component id
+        mit_comp_id_t component_id = flash_status.component_ids[i];
         
         // Create command message
-        mit_packet_t * packet = (mit_packet_t *) transmit_buffer;
-        set_ad(packet, MIT_CMD_BOOT, 1);
+        uint8_t dummy = 0x55;
+        make_mit_packet(component_id, MIT_CMD_BOOT, &dummy, 1);
         
         // Send out command and receive result
-        int len = issue_cmd(addr, transmit_buffer, receive_buffer);
+        int len = issue_cmd(component_id);
         if (len == ERROR_RETURN) {
             print_error("Could not boot component\n");
             return ERROR_RETURN;
         }
 
-        packet = (mit_packet_t *)receive_buffer;
+        mit_packet_t * packet = (mit_packet_t *)receive_buffer;
 
         // Print boot message from component
-        print_info("0x%08x>%s\n", flash_status.component_ids[i], packet->message.rawBytes);
+        print_info("0x%08x>%s\n", packet->ad.comp_id, packet->message.rawBytes);
     }
     return SUCCESS_RETURN;
 }
 
 int attest_component(uint32_t component_id) {
-    // Buffers for board link communication
-    uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN];
-    uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
-
-    // Set the I2C address of the component
-    i2c_addr_t addr = component_id_to_i2c_addr(component_id);
+    // TODO check validity of component id
 
     // Create command message
-    mit_packet_t * packet = (mit_packet_t *) transmit_buffer;
-    set_ad(packet, MIT_CMD_ATTEST, 1);
+    uint8_t dummy = 0x55;
+    make_mit_packet(component_id, MIT_CMD_ATTEST, &dummy, 1);
 
     // Send out command and receive result
-    int len = issue_cmd(addr, transmit_buffer, receive_buffer);
+    int len = issue_cmd(component_id);
     if (len == ERROR_RETURN) {
         print_error("Could not attest component\n");
         return ERROR_RETURN;
     }
 
-    packet = (mit_packet_t *)receive_buffer;
+    mit_packet_t * packet = (mit_packet_t *)receive_buffer;
 
     // Print out attestation data 
-    print_info("C>0x%08x\n", component_id);
+    print_info("C>0x%08x\n", packet->ad.comp_id);
     print_info("%s", packet->message.rawBytes);
     return SUCCESS_RETURN;
 }

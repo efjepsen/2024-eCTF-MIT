@@ -68,6 +68,53 @@ void process_attest(void);
 uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN];
 uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
 
+/******************************* MIT UTILITIES ********************************/
+
+ // TODO gross data allocation ?
+uint8_t working_buffer[MIT_MAX_MSG_LEN];
+
+void set_ad(mit_packet_t * packet, mit_comp_id_t comp_id, mit_opcode_t opcode, uint8_t len) {
+    // TODO limits check on len?
+    packet->ad.nonce.sequenceNumber = 0; // TODO
+    packet->ad.comp_id = comp_id;
+    packet->ad.opcode = opcode;
+    packet->ad.len = len;
+    packet->ad.for_ap = true; // TODO use ifdefs w/ AP_BOOT_MSG to resolve this in common code?
+}
+
+/**
+ * @brief Helper for constructing packets
+ * 
+ * @param component_id: mit_comp_id_t, id of component to make packet for
+ * @param opcode: mit_opcode_t, opcode to make packet for
+ * @param data: uint8_t *, ptr for data to store in message ield
+ * @param len: uint8_t, len of data to copy into message field
+ */
+int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * data, uint8_t len) {
+    // TODO bounds check on len?
+    mit_packet_t * packet = (mit_packet_t *)transmit_buffer;
+
+    // Set Authenticated Data field
+    set_ad(packet, component_id, opcode, len);
+
+    // Nonce generation
+    // set_nonce(packet, component_id);
+
+    // Copy in data
+    // TODO encrypt data in place before copy? :-)
+    memcpy(packet->message.rawBytes, data, len);
+
+    // TODO use this instead to copy in encrypted data
+    // wc_ChaCha20Poly1305_Encrypt(
+    //     shared_key, packet->ad.nonce.rawBytes,
+    //     packet->ad.rawBytes, sizeof(mit_ad_t),
+    //     data, len,
+    //     packet->message.rawBytes, packet->authTag.rawBytes
+    // );
+
+    return 0;
+}
+
 /******************************* POST BOOT FUNCTIONALITY *********************************/
 /**
  * @brief Secure Send 
@@ -79,10 +126,9 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
  * This function must be implemented by your team to align with the security requirements.
 */
 void secure_send(uint8_t* buffer, uint8_t len) {
-    mit_packet_t * packet = (mit_packet_t *) transmit_buffer;
-    memcpy((void *)packet->message.rawBytes, buffer, len);
-    set_ad(packet, MIT_CMD_NONE, len);
-    send_packet_and_ack(packet);
+    // TODO gross allocation
+    make_mit_packet(COMPONENT_ID, MIT_CMD_NONE, buffer, len);
+    send_packet_and_ack((mit_packet_t *)transmit_buffer);
 }
 
 /**
@@ -157,55 +203,53 @@ void component_process_cmd() {
     }
 }
 
-void set_ad(mit_packet_t * packet, mit_opcode_t opcode, uint8_t len) {
-    packet->ad.nonce.sequenceNumber = 0;
-    packet->ad.comp_id = COMPONENT_ID;
-    packet->ad.opcode = opcode;
-    packet->ad.len = len;
-    packet->ad.for_ap = true;
-}
-
 void process_boot() {
     // The AP requested a boot. Set `component_boot` for the main loop and
     // respond with the boot message
-    mit_packet_t * packet = (mit_packet_t *) transmit_buffer;
 
-    // Copy boot message into message
-    uint8_t len = strlen(COMPONENT_BOOT_MSG) + 1;
-    memcpy((void *)packet->message.rawBytes, COMPONENT_BOOT_MSG, len);
+    // Copy boot message into message & create packet
 
-    // Set AD section
-    set_ad(packet, MIT_CMD_BOOT, len);
+    // TODO gross data allocation ?
+    // TODO +1 needed ?
+    uint8_t len = sprintf((char *)working_buffer, "%s", COMPONENT_BOOT_MSG) + 1;
+    make_mit_packet(COMPONENT_ID, MIT_CMD_BOOT, working_buffer, len);
 
-    send_packet_and_ack(packet);
+    send_packet_and_ack((mit_packet_t *)transmit_buffer);
+
     // Call the boot function
     boot();
 }
 
 void process_scan() {
     // The AP requested a scan. Respond with the Component ID
-    mit_packet_t * packet = (mit_packet_t *) transmit_buffer;
-    packet->message.component_id = COMPONENT_ID;
-    set_ad(packet, MIT_CMD_SCAN, sizeof(mit_comp_id_t));
-    send_packet_and_ack(packet);
+
+    // TODO gross data allocation
+    mit_comp_id_t component_id = COMPONENT_ID;
+    make_mit_packet(COMPONENT_ID, MIT_CMD_SCAN, &component_id, sizeof(mit_comp_id_t));
+
+    send_packet_and_ack((mit_packet_t *)transmit_buffer);
 }
 
 void process_validate() {
     // The AP requested a validation. Respond with the Component ID
-    mit_packet_t * packet = (mit_packet_t *) transmit_buffer;
-    packet->message.component_id = COMPONENT_ID;
-    set_ad(packet, MIT_CMD_VALIDATE, sizeof(mit_comp_id_t));
-    send_packet_and_ack(packet);
+
+    // TODO gross data allocation ?
+    mit_comp_id_t component_id = COMPONENT_ID;
+    make_mit_packet(COMPONENT_ID, MIT_CMD_VALIDATE, &component_id, sizeof(mit_comp_id_t));
+
+    send_packet_and_ack((mit_packet_t *)transmit_buffer);
 }
 
 void process_attest() {
     // The AP requested attestation. Respond with the attestation data
-    mit_packet_t * packet = (mit_packet_t *) transmit_buffer;
 
-    uint8_t len = sprintf((char*)packet->message.rawBytes, "LOC>%s\nDATE>%s\nCUST>%s\n",
+    // TODO gross data allocation ?
+    // TODO + 1 needed?
+    uint8_t len = sprintf((char*)working_buffer, "LOC>%s\nDATE>%s\nCUST>%s\n",
                 ATTESTATION_LOC, ATTESTATION_DATE, ATTESTATION_CUSTOMER) + 1;
-    set_ad(packet, MIT_CMD_ATTEST, len);
-    send_packet_and_ack(packet);
+    make_mit_packet(COMPONENT_ID, MIT_CMD_ATTEST, working_buffer, len);
+
+    send_packet_and_ack((mit_packet_t *)transmit_buffer);
 }
 
 /*********************************** MAIN *************************************/
