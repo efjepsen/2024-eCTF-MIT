@@ -209,8 +209,6 @@ void process_attest() {
 /*********************************** MAIN *************************************/
 
 int main(void) {
-    printf("Component Started\n");
-    
     // Enable Global Interrupts
     __enable_irq();
 
