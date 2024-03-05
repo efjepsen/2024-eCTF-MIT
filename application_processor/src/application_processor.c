@@ -68,24 +68,6 @@
 #define ERROR_RETURN -1
 
 /******************************** TYPE DEFINITIONS ********************************/
-// Data structure for sending commands to component
-// Params allows for up to MAX_I2C_MESSAGE_LEN - 1 bytes to be send
-// along with the opcode through board_link. This is not utilized by the example
-// design but can be utilized by your design.
-typedef struct {
-    uint8_t opcode;
-    uint8_t params[MAX_I2C_MESSAGE_LEN-1];
-} command_message;
-
-// Data type for receiving a validate message
-typedef struct {
-    uint32_t component_id;
-} validate_message;
-
-// Data type for receiving a scan message
-typedef struct {
-    uint32_t component_id;
-} scan_message;
 
 // Datatype for information stored in flash
 typedef struct {
@@ -94,18 +76,24 @@ typedef struct {
     uint32_t component_ids[32];
 } flash_entry;
 
-// Datatype for commands sent to components
-typedef enum {
-    COMPONENT_CMD_NONE,
-    COMPONENT_CMD_SCAN,
-    COMPONENT_CMD_VALIDATE,
-    COMPONENT_CMD_BOOT,
-    COMPONENT_CMD_ATTEST
-} component_cmd_t;
-
 /********************************* GLOBAL VARIABLES **********************************/
 // Variable for information stored in flash memory
 flash_entry flash_status;
+
+/******************************* MIT UTILITIES ********************************/
+
+int send_mit_packet(i2c_addr_t addr, mit_packet_t * packet) {
+    uint8_t len = sizeof(mit_ad_t) + sizeof(mit_authtag_t) + packet->ad.len;
+    return send_packet(addr, len, packet);
+}
+
+void set_ad(mit_packet_t * packet, mit_opcode_t opcode, uint8_t len) {
+    packet->ad.nonce.sequenceNumber = 0;
+    packet->ad.comp_id = 0; // TODO
+    packet->ad.opcode = opcode;
+    packet->ad.len = len;
+    packet->ad.for_ap = true;
+}
 
 /******************************* POST BOOT FUNCTIONALITY *********************************/
 /**
@@ -120,7 +108,11 @@ flash_entry flash_status;
 
 */
 int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
-    return send_packet(address, len, buffer);
+    // TODO gross allocation
+    mit_packet_t packet;
+    memcpy(packet.message.rawBytes, buffer, len);
+    set_ad(&packet, MIT_CMD_NONE, len);
+    return send_mit_packet(address, &packet);
 }
 
 /**
@@ -192,7 +184,7 @@ void init() {
 // Send a command to a component and receive the result
 int issue_cmd(i2c_addr_t addr, uint8_t* transmit, uint8_t* receive) {
     // Send message
-    int result = send_packet(addr, sizeof(uint8_t), transmit);
+    int result = send_mit_packet(addr, (mit_packet_t *)transmit);
     if (result == ERROR_RETURN) {
         return ERROR_RETURN;
     }
@@ -226,16 +218,17 @@ int scan_components() {
         }
 
         // Create command message 
-        command_message* command = (command_message*) transmit_buffer;
-        command->opcode = COMPONENT_CMD_SCAN;
+        mit_packet_t * packet = (mit_packet_t *) transmit_buffer;
+        set_ad(packet, MIT_CMD_SCAN, 1);
         
         // Send out command and receive result
         int len = issue_cmd(addr, transmit_buffer, receive_buffer);
 
+        packet = (mit_packet_t *)receive_buffer;
+
         // Success, device is present
         if (len > 0) {
-            scan_message* scan = (scan_message*) receive_buffer;
-            print_info("F>0x%08x\n", scan->component_id);
+            print_info("F>0x%08x\n", packet->ad.comp_id);
         }
     }
     print_success("List\n");
@@ -253,8 +246,8 @@ int validate_components() {
         i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[i]);
 
         // Create command message
-        command_message* command = (command_message*) transmit_buffer;
-        command->opcode = COMPONENT_CMD_VALIDATE;
+        mit_packet_t * packet = (mit_packet_t *) transmit_buffer;
+        set_ad(packet, MIT_CMD_VALIDATE, 1);
         
         // Send out command and receive result
         int len = issue_cmd(addr, transmit_buffer, receive_buffer);
@@ -263,9 +256,10 @@ int validate_components() {
             return ERROR_RETURN;
         }
 
-        validate_message* validate = (validate_message*) receive_buffer;
+        packet = (mit_packet_t *)receive_buffer;
+
         // Check that the result is correct
-        if (validate->component_id != flash_status.component_ids[i]) {
+        if (packet->ad.comp_id != flash_status.component_ids[i]) {
             print_error("Component ID: 0x%08x invalid\n", flash_status.component_ids[i]);
             return ERROR_RETURN;
         }
@@ -284,8 +278,8 @@ int boot_components() {
         i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[i]);
         
         // Create command message
-        command_message* command = (command_message*) transmit_buffer;
-        command->opcode = COMPONENT_CMD_BOOT;
+        mit_packet_t * packet = (mit_packet_t *) transmit_buffer;
+        set_ad(packet, MIT_CMD_BOOT, 1);
         
         // Send out command and receive result
         int len = issue_cmd(addr, transmit_buffer, receive_buffer);
@@ -294,8 +288,10 @@ int boot_components() {
             return ERROR_RETURN;
         }
 
+        packet = (mit_packet_t *)receive_buffer;
+
         // Print boot message from component
-        print_info("0x%08x>%s\n", flash_status.component_ids[i], receive_buffer);
+        print_info("0x%08x>%s\n", flash_status.component_ids[i], packet->message.rawBytes);
     }
     return SUCCESS_RETURN;
 }
@@ -309,8 +305,8 @@ int attest_component(uint32_t component_id) {
     i2c_addr_t addr = component_id_to_i2c_addr(component_id);
 
     // Create command message
-    command_message* command = (command_message*) transmit_buffer;
-    command->opcode = COMPONENT_CMD_ATTEST;
+    mit_packet_t * packet = (mit_packet_t *) transmit_buffer;
+    set_ad(packet, MIT_CMD_ATTEST, 1);
 
     // Send out command and receive result
     int len = issue_cmd(addr, transmit_buffer, receive_buffer);
@@ -319,9 +315,11 @@ int attest_component(uint32_t component_id) {
         return ERROR_RETURN;
     }
 
+    packet = (mit_packet_t *)receive_buffer;
+
     // Print out attestation data 
     print_info("C>0x%08x\n", component_id);
-    print_info("%s", receive_buffer);
+    print_info("%s", packet->message.rawBytes);
     return SUCCESS_RETURN;
 }
 
@@ -470,6 +468,14 @@ int main() {
             attempt_replace();
         } else if (!strcmp(buf, "attest")) {
             attempt_attest();
+        } else if (!strcmp(buf, "custom")) {
+            printf("sizeof(mit_opcode_t):  %d\n", sizeof(mit_opcode_t));
+            printf("sizeof(mit_ad_t):      %d\n", sizeof(mit_ad_t));
+            printf("sizeof(mit_authtag_t): %d\n", sizeof(mit_authtag_t));
+            printf("sizeof(mit_message_t): %d\n", sizeof(mit_message_t));
+            printf("sizeof(mit_packet_t):  %d\n", sizeof(mit_packet_t));
+            printf("sizeof(mit_nonce_t):   %d\n", sizeof(mit_nonce_t));
+            printf("sizeof(mit_comp_id_t): %d\n", sizeof(mit_comp_id_t));
         } else {
             print_error("Unrecognized command '%s'\n", buf);
         }

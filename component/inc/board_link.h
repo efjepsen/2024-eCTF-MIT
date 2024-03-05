@@ -16,6 +16,9 @@
 
 #include "simple_i2c_peripheral.h"
 
+// MIT custom includes
+#include "common_msg.h"
+
 /******************************** MACRO DEFINITIONS ********************************/
 // Last byte of the component ID is the I2C address
 #define COMPONENT_ADDR_MASK 0x000000FF             
@@ -47,12 +50,12 @@ i2c_addr_t component_id_to_i2c_addr(uint32_t component_id);
 /**
  * @brief Send a packet to the AP and wait for ACK
  * 
- * @param message: uint8_t*, message to be sent
+ * @param message: mit_packet_t*, packet to be sent
  * 
  * This function utilizes the simple_i2c_peripheral library to
  * send a packet to the AP and wait for the message to be received
 */
-void send_packet_and_ack(uint8_t len, uint8_t* packet);
+void send_packet_and_ack(mit_packet_t * packet);
 
 /**
  * @brief Wait for a new message from AP and process the message

@@ -42,12 +42,14 @@ i2c_addr_t component_id_to_i2c_addr(uint32_t component_id) {
 /**
  * @brief Send a packet to the AP and wait for ACK
  * 
- * @param message: uint8_t*, message to be sent
+ * @param packet: mit_packet_t*, packet to be sent
  * 
  * This function utilizes the simple_i2c_peripheral library to
  * send a packet to the AP and wait for the message to be received
 */
-void send_packet_and_ack(uint8_t len, uint8_t* packet) {
+void send_packet_and_ack(mit_packet_t * packet) {
+    // TODO gross len calculation
+    uint8_t len = sizeof(mit_ad_t) + sizeof(mit_authtag_t) + packet->ad.len;
     I2C_REGS[TRANSMIT_LEN][0] = len;
     memcpy((void*)I2C_REGS[TRANSMIT], (void*)packet, len);
     I2C_REGS[TRANSMIT_DONE][0] = false;

@@ -53,29 +53,7 @@
 */
 
 /******************************** TYPE DEFINITIONS ********************************/
-// Commands received by Component using 32 bit integer
-typedef enum {
-    COMPONENT_CMD_NONE,
-    COMPONENT_CMD_SCAN,
-    COMPONENT_CMD_VALIDATE,
-    COMPONENT_CMD_BOOT,
-    COMPONENT_CMD_ATTEST
-} component_cmd_t;
 
-/******************************** TYPE DEFINITIONS ********************************/
-// Data structure for receiving messages from the AP
-typedef struct {
-    uint8_t opcode;
-    uint8_t params[MAX_I2C_MESSAGE_LEN-1];
-} command_message;
-
-typedef struct {
-    uint32_t component_id;
-} validate_message;
-
-typedef struct {
-    uint32_t component_id;
-} scan_message;
 
 /********************************* FUNCTION DECLARATIONS **********************************/
 // Core function definitions
@@ -101,7 +79,10 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
  * This function must be implemented by your team to align with the security requirements.
 */
 void secure_send(uint8_t* buffer, uint8_t len) {
-    send_packet_and_ack(len, buffer); 
+    mit_packet_t * packet = (mit_packet_t *) transmit_buffer;
+    memcpy((void *)packet->message.rawBytes, buffer, len);
+    set_ad(packet, MIT_CMD_NONE, len);
+    send_packet_and_ack(packet);
 }
 
 /**
@@ -154,57 +135,77 @@ void boot() {
 
 // Handle a transaction from the AP
 void component_process_cmd() {
-    command_message* command = (command_message*) receive_buffer;
+    mit_packet_t * packet = (mit_packet_t *) receive_buffer;
 
     // Output to application processor dependent on command received
-    switch (command->opcode) {
-    case COMPONENT_CMD_BOOT:
+    switch (packet->ad.opcode) {
+    case MIT_CMD_BOOT:
         process_boot();
         break;
-    case COMPONENT_CMD_SCAN:
+    case MIT_CMD_SCAN:
         process_scan();
         break;
-    case COMPONENT_CMD_VALIDATE:
+    case MIT_CMD_VALIDATE:
         process_validate();
         break;
-    case COMPONENT_CMD_ATTEST:
+    case MIT_CMD_ATTEST:
         process_attest();
         break;
     default:
-        printf("Error: Unrecognized command received %d\n", command->opcode);
+        printf("Error: Unrecognized command received %d\n", packet->ad.opcode);
         break;
     }
+}
+
+void set_ad(mit_packet_t * packet, mit_opcode_t opcode, uint8_t len) {
+    packet->ad.nonce.sequenceNumber = 0;
+    packet->ad.comp_id = COMPONENT_ID;
+    packet->ad.opcode = opcode;
+    packet->ad.len = len;
+    packet->ad.for_ap = true;
 }
 
 void process_boot() {
     // The AP requested a boot. Set `component_boot` for the main loop and
     // respond with the boot message
+    mit_packet_t * packet = (mit_packet_t *) transmit_buffer;
+
+    // Copy boot message into message
     uint8_t len = strlen(COMPONENT_BOOT_MSG) + 1;
-    memcpy((void*)transmit_buffer, COMPONENT_BOOT_MSG, len);
-    send_packet_and_ack(len, transmit_buffer);
+    memcpy((void *)packet->message.rawBytes, COMPONENT_BOOT_MSG, len);
+
+    // Set AD section
+    set_ad(packet, MIT_CMD_BOOT, len);
+
+    send_packet_and_ack(packet);
     // Call the boot function
     boot();
 }
 
 void process_scan() {
     // The AP requested a scan. Respond with the Component ID
-    scan_message* packet = (scan_message*) transmit_buffer;
-    packet->component_id = COMPONENT_ID;
-    send_packet_and_ack(sizeof(scan_message), transmit_buffer);
+    mit_packet_t * packet = (mit_packet_t *) transmit_buffer;
+    packet->message.component_id = COMPONENT_ID;
+    set_ad(packet, MIT_CMD_SCAN, sizeof(mit_comp_id_t));
+    send_packet_and_ack(packet);
 }
 
 void process_validate() {
     // The AP requested a validation. Respond with the Component ID
-    validate_message* packet = (validate_message*) transmit_buffer;
-    packet->component_id = COMPONENT_ID;
-    send_packet_and_ack(sizeof(validate_message), transmit_buffer);
+    mit_packet_t * packet = (mit_packet_t *) transmit_buffer;
+    packet->message.component_id = COMPONENT_ID;
+    set_ad(packet, MIT_CMD_VALIDATE, sizeof(mit_comp_id_t));
+    send_packet_and_ack(packet);
 }
 
 void process_attest() {
     // The AP requested attestation. Respond with the attestation data
-    uint8_t len = sprintf((char*)transmit_buffer, "LOC>%s\nDATE>%s\nCUST>%s\n",
+    mit_packet_t * packet = (mit_packet_t *) transmit_buffer;
+
+    uint8_t len = sprintf((char*)packet->message.rawBytes, "LOC>%s\nDATE>%s\nCUST>%s\n",
                 ATTESTATION_LOC, ATTESTATION_DATE, ATTESTATION_CUSTOMER) + 1;
-    send_packet_and_ack(len, transmit_buffer);
+    set_ad(packet, MIT_CMD_ATTEST, len);
+    send_packet_and_ack(packet);
 }
 
 /*********************************** MAIN *************************************/
