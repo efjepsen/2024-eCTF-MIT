@@ -8,6 +8,11 @@
 
 #include "ap_common.h"
 
+// Reset nonces for our i2c comms sessions
+void session_init(void);
+
+mit_session_t * get_session_of_component(mit_comp_id_t component_id);
+
 // Return number of provisioned components
 int get_num_components(void);
 
@@ -29,6 +34,9 @@ int send_mit_packet(i2c_addr_t addr, mit_packet_t * packet);
 
 // Checks if component id is currently provisioned
 bool is_valid_component(mit_comp_id_t component_id);
+
+// Ephemeral scanner for List command
+int ephemeral_handshake(mit_comp_id_t component_id);
 
 // Helper to construct packet, stores in transmit_buffer
 int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * data, uint8_t len);

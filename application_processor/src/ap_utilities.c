@@ -40,6 +40,38 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
 
 /********************************* UTILITIES **********************************/
 
+// TODO store in ecc ram?
+// TODO do we need 32 sessions? supporting only 2 component ids seems fine.
+mit_session_t sessions[32];
+
+// TODO replace with CHACHA20_POLY1305_AEAD_IV_SIZE
+uint8_t null_nonce[MIT_NONCE_SIZE] = {0};
+
+void session_init(void) {
+    // Copy stored component_ids into sessions.
+    // Initialize nonce's to {0}.
+    for (int i = 0; i < get_num_components(); i++) {
+        sessions[i].component_id = get_component_id(i);
+        memset(sessions[i].outgoing_nonce.rawBytes, 0, sizeof(mit_nonce_t));
+        memset(sessions[i].incoming_nonce.rawBytes, 0, sizeof(mit_nonce_t));
+
+        // Initialize outgoing nonces to some random value
+        while (memcmp(sessions[i].outgoing_nonce.rawBytes, null_nonce, sizeof(mit_nonce_t)) == 0) {
+            get_rand_bytes(sessions[i].outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+        }
+    }
+}
+
+mit_session_t * get_session_of_component(mit_comp_id_t component_id) {
+    for (int i = 0; i < get_num_components(); i++) {
+        if (sessions[i].component_id == component_id) {
+            return &sessions[i];
+        }
+    }
+
+    return NULL;
+}
+
 // Return number of provisioned components
 int get_num_components(void) {
     return flash_status.component_cnt;
@@ -61,6 +93,7 @@ void flash_first_boot(void) {
     // Write Component IDs from flash if first boot e.g. flash unwritten
     if (flash_status.flash_magic != FLASH_MAGIC) {
         print_debug("First boot, setting flash!\n");
+        flash_simple_erase_page(FLASH_ADDR);
 
         flash_status.flash_magic = FLASH_MAGIC;
         flash_status.component_cnt = COMPONENT_CNT;
@@ -77,7 +110,14 @@ int swap_components(mit_comp_id_t component_id_in, mit_comp_id_t component_id_ou
     // Find the component to swap out
     for (unsigned i = 0; i < flash_status.component_cnt; i++) {
         if (flash_status.component_ids[i] == component_id_out) {
+            // Swap out component id
             flash_status.component_ids[i] = component_id_in;
+
+            // Reset session info
+            sessions[i].component_id = component_id_in;
+            memset(sessions[i].outgoing_nonce.rawBytes, 0, sizeof(mit_nonce_t));
+            memset(sessions[i].incoming_nonce.rawBytes, 0, sizeof(mit_nonce_t));
+            get_rand_bytes(sessions[i].outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
 
             // write updated component_ids to flash
             flash_simple_erase_page(FLASH_ADDR);
@@ -94,17 +134,86 @@ int swap_components(mit_comp_id_t component_id_in, mit_comp_id_t component_id_ou
 int issue_cmd(mit_comp_id_t component_id) {
     i2c_addr_t addr = component_id_to_i2c_addr((uint32_t)component_id);
 
+    // TODO validate current tx packet belongs to stated component id
+    mit_packet_t * packet = get_tx_packet();
+    if (packet->ad.comp_id != component_id) {
+        print_error("issue_cmd: packet in buf doesnt match given component id\n");
+        return ERROR_RETURN;
+    }
+
+    // TODO cleanup use of transmit_buffer, receive_buffer here. Not necessary as args?
     // Send message
     int result = send_mit_packet(addr, (mit_packet_t *)transmit_buffer);
     if (result == ERROR_RETURN) {
+        print_error("issue_cmd: send_mit_packet error\n");
         return ERROR_RETURN;
     }
-    
+
     // Receive message
     int len = poll_and_receive_packet(addr, receive_buffer);
     if (len == ERROR_RETURN) {
+        print_error("issue_cmd: poll_and_receive_packet error\n");
         return ERROR_RETURN;
     }
+
+    /*************** VALIDATE RECEIVED PACKET ****************/
+    packet = get_rx_packet();
+
+    if (packet->ad.comp_id != component_id) {
+        print_error("rx packet (0x%08x) doesn't match given component id (0x%08x)\n", packet->ad.comp_id, component_id);
+        return ERROR_RETURN;
+    }
+
+    if (packet->ad.for_ap != true) {
+        print_error("rx packet not tagged for AP\n");
+        return ERROR_RETURN;
+    }
+
+    if (packet->ad.len == 0) {
+        print_error("rx packet has null message length\n");
+        return ERROR_RETURN;
+    }
+
+    mit_session_t * session = get_session_of_component(component_id);
+    if (session == NULL) {
+        print_error("Session not found for component id 0x%08x\n", component_id);
+    }
+
+    // if we currently have a null nonce, then trust the incoming nonce, as long as it passes authtag check.
+    if (memcmp(session->incoming_nonce.rawBytes, null_nonce, sizeof(mit_nonce_t)) == 0) {
+        // TODO validate authTag field
+        ;
+        memcpy(session->incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t));
+        // TODO decrypt
+        ;
+    } else if (memcmp(session->incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
+        // TODO validate authTag field
+        ;
+        // TODO decrypt
+        ;
+    } else {
+        print_error("Incoming nonce (seq 0x%08x) doesn't match expected nonce (seq 0x%08x)\n",
+            packet->ad.nonce.sequenceNumber, session->incoming_nonce.sequenceNumber
+        );
+        return ERROR_RETURN;
+    }
+
+    // TODO where to decrypt cipher into? dont do it in place in rx buffer
+
+    // TODO use this instead to copy in encrypted data
+    // wc_ChaCha20Poly1305_Encrypt(
+    //     shared_key, packet->ad.nonce.rawBytes,
+    //     packet->ad.rawBytes, sizeof(mit_ad_t),
+    //     data, len,
+    //     packet->message.rawBytes, packet->authTag.rawBytes
+    // );
+
+    // TODO best place for this?
+    // increase incoming nonce
+    session->incoming_nonce.sequenceNumber += 1;
+
+    /********************************************************/
+
     return len;
 }
 
@@ -119,7 +228,7 @@ int send_mit_packet(i2c_addr_t addr, mit_packet_t * packet) {
 
 void set_ad(mit_packet_t * packet, mit_comp_id_t comp_id, mit_opcode_t opcode, uint8_t len) {
     // TODO limits check on len?
-    packet->ad.nonce.sequenceNumber = 0; // TODO
+    // packet->ad.nonce.sequenceNumber = 0; // TODO
     packet->ad.comp_id = comp_id;
     packet->ad.opcode = opcode;
     packet->ad.len = len;
@@ -143,6 +252,154 @@ bool is_valid_component(mit_comp_id_t component_id) {
     return false;
 }
 
+
+// TODO do we really need this? could just stuff random bytes in packet instead.
+mit_nonce_t ephemeral_nonce;
+
+/**
+ * @brief Ephemeral scanner for List command
+ */
+int ephemeral_handshake(mit_comp_id_t component_id) {
+    // TODO bounds check on len?
+    mit_packet_t * packet = (mit_packet_t *)transmit_buffer;
+
+    // Set Authenticated Data field
+    set_ad(packet, component_id, MIT_CMD_SCAN, 1);
+
+    /***** NONCE GENERATION/LOOKUP *****/
+
+    // WARNING reusing a nonce is the worst thing you can possibly do.
+
+    mit_session_t * session = get_session_of_component(component_id);
+    if (session == NULL) {
+        // If component_id doesn't match a provisioned component, use an ephemeral nonce
+        get_rand_bytes(ephemeral_nonce.rawBytes, sizeof(mit_nonce_t));
+    } else {
+        // if the nonce is 0, generate a random nonce
+        while (memcmp(null_nonce, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
+            get_rand_bytes(session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+        }
+        memcpy(ephemeral_nonce.rawBytes, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+    }
+
+    memcpy(packet->ad.nonce.rawBytes, ephemeral_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    // TODO necessary? check if we actually copied
+    if (memcmp(packet->ad.nonce.rawBytes, ephemeral_nonce.rawBytes, sizeof(mit_nonce_t))) {
+        print_error("Failed to copy nonce!\n");
+        return ERROR_RETURN;
+    }
+
+    /****************************/
+
+    // Copy in data
+    // TODO encrypt data in place before copy? :-)
+    static uint8_t dummy = 0x55;
+    memcpy(packet->message.rawBytes, &dummy, 1);
+
+    // TODO use this instead to copy in encrypted data
+    // wc_ChaCha20Poly1305_Encrypt(
+    //     shared_key, packet->ad.nonce.rawBytes,
+    //     packet->ad.rawBytes, sizeof(mit_ad_t),
+    //     data, len,
+    //     packet->message.rawBytes, packet->authTag.rawBytes
+    // );
+
+    // TODO best place to increase nonce?
+    if (session != NULL) {
+        session->outgoing_nonce.sequenceNumber += 1;
+    }
+
+    /********** get response ************/
+    /********** get response ************/
+    /********** get response ************/
+    /********** get response ************/
+    /********** get response ************/
+    /********** get response ************/
+    i2c_addr_t addr = component_id_to_i2c_addr(component_id);
+
+    // TODO validate current tx packet belongs to stated component id
+    packet = get_tx_packet();
+    if (packet->ad.comp_id != component_id) {
+        print_error("ephemeral_handshake: packet in buf doesnt match given component id\n");
+        return ERROR_RETURN;
+    }
+
+    // TODO cleanup use of transmit_buffer, receive_buffer here. Not necessary as args?
+    // Send message
+    int result = send_mit_packet(addr, (mit_packet_t *)transmit_buffer);
+    if (result == ERROR_RETURN) {
+        // print_error("ephemeral_handshake: send_mit_packet error\n");
+        return ERROR_RETURN;
+    }
+
+    // Receive message
+    int len = poll_and_receive_packet(addr, receive_buffer);
+    if (len == ERROR_RETURN) {
+        print_error("ephemeral_handshake: poll_and_receive_packet error\n");
+        return ERROR_RETURN;
+    }
+
+    /*************** VALIDATE RECEIVED PACKET ****************/
+    packet = get_rx_packet();
+
+    // Masked comparison since we may be blindly scanning.
+    if ((packet->ad.comp_id & 0xff) != (component_id & 0xff)) {
+        print_error("rx packet (0x%08x) doesn't match given component id (0x%08x)\n", packet->ad.comp_id, component_id);
+        return ERROR_RETURN;
+    }
+
+    if (packet->ad.for_ap != true) {
+        print_error("rx packet not tagged for AP\n");
+        return ERROR_RETURN;
+    }
+
+    if (packet->ad.len == 0) {
+        print_error("rx packet has null message length\n");
+        return ERROR_RETURN;
+    }
+
+    /**
+     * If we don't have a session, trust as long as authTag checks out.
+     * 
+     * If we already had an established session with this component (session != NULL)
+     * then decrypt and authenticate as normal, etc.
+     */
+    if (session == NULL) {
+        // TODO validate authTag field
+        ;
+    } else {
+        // if we currently have a null nonce, then trust the incoming nonce, as long as it passes authtag check.
+        if (memcmp(session->incoming_nonce.rawBytes, null_nonce, sizeof(mit_nonce_t)) == 0) {
+            // TODO validate authTag field
+            ;
+            memcpy(session->incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t));
+        } else if (memcmp(session->incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
+            // TODO validate authTag field
+            ;
+        } else {
+            print_error("Incoming nonce (seq 0x%08x) doesn't match expected nonce (seq 0x%08x)\n",
+                packet->ad.nonce.sequenceNumber, session->incoming_nonce.sequenceNumber
+            );
+            return ERROR_RETURN;
+        }
+    }
+
+    // We don't really need to decrypt anything here.
+
+    print_info("F>0x%08x\n", packet->ad.comp_id);
+
+    // TODO best place for this?
+    // increase incoming nonce
+    if (session != NULL) {
+        session->incoming_nonce.sequenceNumber += 1;
+    }
+
+    /********************************************************/
+
+    return SUCCESS_RETURN;
+}
+
 /**
  * @brief Helper for constructing packets
  * 
@@ -158,8 +415,29 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
     // Set Authenticated Data field
     set_ad(packet, component_id, opcode, len);
 
-    // Nonce generation
-    // set_nonce(packet, component_id);
+    /***** NONCE GENERATION/LOOKUP *****/
+
+    // WARNING reusing a nonce is the worst thing you can possibly do.
+
+    mit_session_t * session = get_session_of_component(component_id);
+    if (session == NULL) {
+        print_error("No session found for component_id 0x%08x\n", component_id);
+        return ERROR_RETURN;
+    }
+
+    // if the nonce is 0, generate a random nonce
+    while (memcmp(null_nonce, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
+        get_rand_bytes(session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+    }
+
+    memcpy(packet->ad.nonce.rawBytes, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    // TODO do we really need this :)
+    if (memcmp(packet->ad.nonce.rawBytes, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t))) {
+        print_error("Failed to copy nonce!\n");
+        return ERROR_RETURN;
+    }
+    /****************************/
 
     // Copy in data
     // TODO encrypt data in place before copy? :-)
@@ -173,7 +451,10 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
     //     packet->message.rawBytes, packet->authTag.rawBytes
     // );
 
-    return 0;
+    // TODO best place to increase nonce?
+    session->outgoing_nonce.sequenceNumber += 1;
+
+    return SUCCESS_RETURN;
 }
 
 /******************************* GROSS INTERFACE ********************************/

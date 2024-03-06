@@ -26,7 +26,10 @@ int attest_component(uint32_t component_id) {
 
     // Create command message
     uint8_t dummy = 0x55;
-    make_mit_packet(component_id, MIT_CMD_ATTEST, &dummy, 1);
+    int ret = make_mit_packet(component_id, MIT_CMD_ATTEST, &dummy, 1);
+    if (ret != SUCCESS_RETURN) {
+        return ret;
+    }
 
     // Send out command and receive result
     int len = issue_cmd(component_id);

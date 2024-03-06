@@ -58,6 +58,14 @@ i2c_addr_t component_id_to_i2c_addr(uint32_t component_id);
 void send_packet_and_ack(mit_packet_t * packet);
 
 /**
+ * @brief Send a null packet to the AP
+ * 
+ * This function utilizes the simple_i2c_peripheral library to
+ * send a bad packet to the AP.
+*/
+void send_ack(void);
+
+/**
  * @brief Wait for a new message from AP and process the message
  * 
  * @param packet: uint8_t*, message received

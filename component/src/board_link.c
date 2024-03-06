@@ -60,6 +60,25 @@ void send_packet_and_ack(mit_packet_t * packet) {
 }
 
 /**
+ * @brief Send a null packet to the AP
+ * 
+ * This function utilizes the simple_i2c_peripheral library to
+ * send a bad packet to the AP.
+*/
+void send_ack(void) {
+    // TODO gross len calculation
+    static uint8_t len = 1;
+    static uint8_t dummy = 0x1;
+    I2C_REGS[TRANSMIT_LEN][0] = len;
+    memcpy((void*)I2C_REGS[TRANSMIT], &dummy, len);
+    I2C_REGS[TRANSMIT_DONE][0] = false;
+
+    // Wait for ack from AP
+    while(!I2C_REGS[TRANSMIT_DONE][0]);
+    I2C_REGS[RECEIVE_DONE][0] = false;
+}
+
+/**
  * @brief Wait for a new message from AP and process the message
  * 
  * @param packet: uint8_t*, message received

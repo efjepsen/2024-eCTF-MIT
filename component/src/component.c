@@ -57,11 +57,11 @@
 
 /********************************* FUNCTION DECLARATIONS **********************************/
 // Core function definitions
-void component_process_cmd(void);
-void process_boot(void);
-void process_scan(void);
-void process_validate(void);
-void process_attest(void);
+int component_process_cmd(void);
+int process_boot(void);
+int process_scan(void);
+int process_validate(void);
+int process_attest(void);
 
 /********************************* GLOBAL VARIABLES **********************************/
 // Global varaibles
@@ -72,6 +72,24 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
 
  // TODO gross data allocation ?
 uint8_t working_buffer[MIT_MAX_MSG_LEN];
+
+mit_session_t session;
+
+// TODO replace with CHACHA20_POLY1305_AEAD_IV_SIZE
+uint8_t null_nonce[MIT_NONCE_SIZE] = {0};
+
+void session_init(void) {
+    // Initialize nonce's to {0}.
+    session.component_id = 0;
+    memset(session.outgoing_nonce.rawBytes, 0, MIT_NONCE_SIZE);
+    memset(session.incoming_nonce.rawBytes, 0, MIT_NONCE_SIZE);
+
+    // Initialize outgoing nonce to some random value
+    while (memcmp(session.outgoing_nonce.rawBytes, null_nonce, MIT_NONCE_SIZE) == 0) {
+        get_rand_bytes(session.outgoing_nonce.rawBytes, MIT_NONCE_SIZE);
+    }
+}
+
 
 void set_ad(mit_packet_t * packet, mit_comp_id_t comp_id, mit_opcode_t opcode, uint8_t len) {
     // TODO limits check on len?
@@ -97,8 +115,24 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
     // Set Authenticated Data field
     set_ad(packet, component_id, opcode, len);
 
-    // Nonce generation
-    // set_nonce(packet, component_id);
+    /***** NONCE GENERATION/LOOKUP *****/
+
+    // WARNING reusing a nonce is the worst thing you can possibly do.
+
+    // if the nonce is 0, generate a random nonce
+    while (memcmp(null_nonce, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
+        get_rand_bytes(session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+    }
+
+    memcpy(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    // TODO do we really need this :)
+    if (memcmp(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t))) {
+        printf("error: Failed to copy nonce!\n");
+        return ERROR_RETURN;
+    }
+
+    /****************************/
 
     // Copy in data
     // TODO encrypt data in place before copy? :-)
@@ -112,7 +146,10 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
     //     packet->message.rawBytes, packet->authTag.rawBytes
     // );
 
-    return 0;
+    // TODO best place to increase nonce?
+    session.outgoing_nonce.sequenceNumber += 1;
+
+    return SUCCESS_RETURN;
 }
 
 /******************************* POST BOOT FUNCTIONALITY *********************************/
@@ -179,31 +216,84 @@ void boot() {
     #endif
 }
 
+void send_ack();
+
 // Handle a transaction from the AP
-void component_process_cmd() {
+int component_process_cmd() {
     mit_packet_t * packet = (mit_packet_t *) receive_buffer;
+
+    // Special handling for scan commands in non-established session
+    if (packet->ad.comp_id != COMPONENT_ID) {                       // if not an established session
+        if ((packet->ad.comp_id & 0xff) == (COMPONENT_ID & 0xff)) { // but addressed to us
+            if (packet->ad.opcode == MIT_CMD_SCAN) {                // and is a scan
+                if (packet->ad.for_ap == false) {                   // and is not for AP
+                    if (packet->ad.len != 0) {                      // and has length
+                        return process_scan();                      // process scan
+                    }
+                }
+            }
+        }
+    }
+
+    // TODO validate received packet
+    /*************** VALIDATE RECEIVED PACKET ****************/
+    if (packet->ad.comp_id != COMPONENT_ID) {
+        printf("error: rx packet (0x%08x) doesn't match given component id (0x%08x)\n", packet->ad.comp_id, COMPONENT_ID);
+        return ERROR_RETURN;
+    }
+
+    // TODO use ifdefs for this section
+    if (packet->ad.for_ap != false) {
+        printf("error: rx packet not tagged for component\n");
+        return ERROR_RETURN;
+    }
+
+    if (packet->ad.len == 0) {
+        printf("error: rx packet has null message length\n");
+        return ERROR_RETURN;
+    }
+
+    // if we currently have a null nonce, then trust the incoming nonce, as long as it passes authtag check.
+    if (memcmp(session.incoming_nonce.rawBytes, null_nonce, sizeof(mit_nonce_t)) == 0) {
+        // TODO validate authTag field
+        ;
+        memcpy(session.incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t));
+        // TODO decrypt
+        ;
+    } else if (memcmp(session.incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
+        // TODO validate authTag field
+        ;
+        // TODO decrypt
+        ;
+    } else {
+        // don't clear 
+        printf("error: Incoming nonce (seq 0x%08x) doesn't match expected nonce (seq 0x%08x)\n",
+            packet->ad.nonce.sequenceNumber, session.incoming_nonce.sequenceNumber
+        );
+        return ERROR_RETURN;
+    }
+
+    // TODO best place for this?
+    // increase incoming nonce
+    session.incoming_nonce.sequenceNumber += 1;
 
     // Output to application processor dependent on command received
     switch (packet->ad.opcode) {
     case MIT_CMD_BOOT:
-        process_boot();
-        break;
+        return process_boot();
     case MIT_CMD_SCAN:
-        process_scan();
-        break;
+        return process_scan();
     case MIT_CMD_VALIDATE:
-        process_validate();
-        break;
+        return process_validate();
     case MIT_CMD_ATTEST:
-        process_attest();
-        break;
+        return process_attest();
     default:
         printf("Error: Unrecognized command received %d\n", packet->ad.opcode);
-        break;
+        return ERROR_RETURN;
     }
 }
 
-void process_boot() {
+int process_boot() {
     // The AP requested a boot. Set `component_boot` for the main loop and
     // respond with the boot message
 
@@ -212,44 +302,66 @@ void process_boot() {
     // TODO gross data allocation ?
     // TODO +1 needed ?
     uint8_t len = sprintf((char *)working_buffer, "%s", COMPONENT_BOOT_MSG) + 1;
-    make_mit_packet(COMPONENT_ID, MIT_CMD_BOOT, working_buffer, len);
+    int ret = make_mit_packet(COMPONENT_ID, MIT_CMD_BOOT, working_buffer, len);
+
+    if (ret != SUCCESS_RETURN) {
+        return ret;
+    }
 
     send_packet_and_ack((mit_packet_t *)transmit_buffer);
-
     // Call the boot function
     boot();
+
+    // We should never reach this.
+    return ERROR_RETURN;
 }
 
-void process_scan() {
+
+int process_scan() {
     // The AP requested a scan. Respond with the Component ID
 
     // TODO gross data allocation
     mit_comp_id_t component_id = COMPONENT_ID;
-    make_mit_packet(COMPONENT_ID, MIT_CMD_SCAN, &component_id, sizeof(mit_comp_id_t));
+    int ret = make_mit_packet(COMPONENT_ID, MIT_CMD_SCAN, &component_id, sizeof(mit_comp_id_t));
+
+    if (ret != SUCCESS_RETURN) {
+        return ret;
+    }
 
     send_packet_and_ack((mit_packet_t *)transmit_buffer);
+    return SUCCESS_RETURN;
 }
 
-void process_validate() {
+int process_validate() {
     // The AP requested a validation. Respond with the Component ID
 
     // TODO gross data allocation ?
     mit_comp_id_t component_id = COMPONENT_ID;
-    make_mit_packet(COMPONENT_ID, MIT_CMD_VALIDATE, &component_id, sizeof(mit_comp_id_t));
+    int ret = make_mit_packet(COMPONENT_ID, MIT_CMD_VALIDATE, &component_id, sizeof(mit_comp_id_t));
+
+    if (ret != SUCCESS_RETURN) {
+        return ret;
+    }
 
     send_packet_and_ack((mit_packet_t *)transmit_buffer);
+    return SUCCESS_RETURN;
 }
 
-void process_attest() {
+int process_attest() {
     // The AP requested attestation. Respond with the attestation data
 
     // TODO gross data allocation ?
     // TODO + 1 needed?
     uint8_t len = sprintf((char*)working_buffer, "LOC>%s\nDATE>%s\nCUST>%s\n",
                 ATTESTATION_LOC, ATTESTATION_DATE, ATTESTATION_CUSTOMER) + 1;
-    make_mit_packet(COMPONENT_ID, MIT_CMD_ATTEST, working_buffer, len);
+    int ret = make_mit_packet(COMPONENT_ID, MIT_CMD_ATTEST, working_buffer, len);
+
+    if (ret != SUCCESS_RETURN) {
+        return ret;
+    }
 
     send_packet_and_ack((mit_packet_t *)transmit_buffer);
+    return SUCCESS_RETURN;
 }
 
 /*********************************** MAIN *************************************/
@@ -260,6 +372,7 @@ int main(void) {
 
     // MIT: Initialize our custom features
     common_init();
+    session_init();
     
     // Initialize Component
     i2c_addr_t addr = component_id_to_i2c_addr(COMPONENT_ID);
@@ -270,6 +383,8 @@ int main(void) {
     while (1) {
         wait_and_receive_packet(receive_buffer);
 
-        component_process_cmd();
+        if (component_process_cmd() != SUCCESS_RETURN) {
+            send_ack();
+        }
     }
 }

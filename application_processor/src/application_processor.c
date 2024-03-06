@@ -62,6 +62,7 @@ void init() {
 
     // MIT: Initialize our custom features
     common_init();
+    session_init();
     
     // Initialize board link interface
     board_link_init();
@@ -95,6 +96,17 @@ int main() {
             printf("sizeof(mit_packet_t):  %d\n", sizeof(mit_packet_t));
             printf("sizeof(mit_nonce_t):   %d\n", sizeof(mit_nonce_t));
             printf("sizeof(mit_comp_id_t): %d\n", sizeof(mit_comp_id_t));
+            printf("--- sessions info ---\n");
+            for (int i = 0; i < get_num_components(); i++) {
+                mit_comp_id_t component_id = get_component_id(i);
+                mit_session_t * session = get_session_of_component(component_id);
+                printf("component_id: 0x%08x\n");
+                printf("  session.component_id: 0x%08x\n", session->component_id);
+                printf("  session.outgoing_nonce: 0x");
+                print_hex(session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+                printf("  session.incoming_nonce: 0x");
+                print_hex(session->incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+            }
         } else {
             print_error("Unrecognized command '%s'\n", buf);
         }

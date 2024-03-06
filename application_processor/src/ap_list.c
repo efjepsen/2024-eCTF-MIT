@@ -24,19 +24,16 @@ int scan_components() {
             continue;
         }
 
-        // Create command message
-        uint8_t dummy = 0x55;
-        make_mit_packet(addr, MIT_CMD_SCAN, &dummy, 1);
-        
-        // Send out command and receive result
-        int len = issue_cmd(addr);
+        mit_comp_id_t component_id = addr;
 
-        mit_packet_t * packet = get_rx_packet();
-
-        // Success, device is present
-        if (len > 0) {
-            print_info("F>0x%08x\n", packet->ad.comp_id);
+        // Use proper component id if possible.
+        for (int id = 0; id < get_num_components(); id++) {
+            if (component_id_to_i2c_addr(get_component_id(id)) == addr) {
+                component_id = get_component_id(id);
+            }
         }
+
+        ephemeral_handshake(component_id);
     }
     print_success("List\n");
     return SUCCESS_RETURN;

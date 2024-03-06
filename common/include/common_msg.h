@@ -68,4 +68,11 @@ typedef union __attribute__((packed)) {
     uint8_t rawBytes[MIT_MAX_PACKET_LEN];
 } mit_packet_t;
 
+// Session structure
+typedef struct __attribute__((packed)) {
+    mit_comp_id_t component_id;
+    mit_nonce_t outgoing_nonce;
+    mit_nonce_t incoming_nonce;
+} mit_session_t;
+
 #endif

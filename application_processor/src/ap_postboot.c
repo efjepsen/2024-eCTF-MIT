@@ -18,7 +18,10 @@
 */
 int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
     // TODO gross allocation
-    make_mit_packet(address, MIT_CMD_NONE, buffer, len);
+    int ret = make_mit_packet(address, MIT_CMD_NONE, buffer, len);
+    if (ret != SUCCESS_RETURN) {
+        return ret;
+    }
     return send_mit_packet(address, get_tx_packet());
 }
 
