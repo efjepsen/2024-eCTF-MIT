@@ -29,6 +29,7 @@
 #include "global_secrets.h"
 
 // MIT: Includes for our custom features
+#include "common_crypto.h"
 #include "common_init.h"
 #include "common_msg.h"
 #include "simple_trng.h"
@@ -70,8 +71,11 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
 
 /******************************* MIT UTILITIES ********************************/
 
+#define COMP_PLAINTEXT_LEN 256
+
  // TODO gross data allocation ?
 uint8_t working_buffer[MIT_MAX_MSG_LEN];
+uint8_t comp_plaintext[COMP_PLAINTEXT_LEN];
 
 mit_session_t session;
 
@@ -109,6 +113,8 @@ void set_ad(mit_packet_t * packet, mit_comp_id_t comp_id, mit_opcode_t opcode, u
  * @param len: uint8_t, len of data to copy into message field
  */
 int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * data, uint8_t len) {
+    int ret;
+
     // TODO bounds check on len?
     mit_packet_t * packet = (mit_packet_t *)transmit_buffer;
 
@@ -134,17 +140,13 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
 
     /****************************/
 
-    // Copy in data
-    // TODO encrypt data in place before copy? :-)
-    memcpy(packet->message.rawBytes, data, len);
-
-    // TODO use this instead to copy in encrypted data
-    // wc_ChaCha20Poly1305_Encrypt(
-    //     shared_key, packet->ad.nonce.rawBytes,
-    //     packet->ad.rawBytes, sizeof(mit_ad_t),
-    //     data, len,
-    //     packet->message.rawBytes, packet->authTag.rawBytes
-    // );
+    // Encrypt in data
+    ret = mit_encrypt(packet, data, len);
+    if (ret != SUCCESS_RETURN) {
+        printf("error: encryption failed with error code %i\n", ret);
+        memset(packet, 0, sizeof(mit_packet_t));
+        return ERROR_RETURN;
+    }
 
     // TODO best place to increase nonce?
     session.outgoing_nonce.sequenceNumber += 1;
@@ -220,6 +222,7 @@ void send_ack();
 
 // Handle a transaction from the AP
 int component_process_cmd() {
+    int ret;
     mit_packet_t * packet = (mit_packet_t *) receive_buffer;
 
     // Special handling for scan commands in non-established session
@@ -228,7 +231,13 @@ int component_process_cmd() {
             if (packet->ad.opcode == MIT_CMD_SCAN) {                // and is a scan
                 if (packet->ad.for_ap == false) {                   // and is not for AP
                     if (packet->ad.len != 0) {                      // and has length
-                        return process_scan();                      // process scan
+                        if (mit_decrypt(packet, comp_plaintext) == SUCCESS_RETURN) { // and is valid!
+                            return process_scan();                  // process scan
+                        } else {
+                            printf("error: decryption failed for ephemeral scan request\n");
+                            memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
+                            return ERROR_RETURN;
+                        }
                     }
                 }
             }
@@ -255,18 +264,29 @@ int component_process_cmd() {
 
     // if we currently have a null nonce, then trust the incoming nonce, as long as it passes authtag check.
     if (memcmp(session.incoming_nonce.rawBytes, null_nonce, sizeof(mit_nonce_t)) == 0) {
-        // TODO validate authTag field
-        ;
+        // Validate authTag field
+        ret = mit_decrypt(packet, comp_plaintext);
+
+        if (ret != SUCCESS_RETURN) {
+            printf("error: decryption failed with error code %i\n", ret);
+            memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
+            return ERROR_RETURN;
+        }
+
+        // Save nonce into session
         memcpy(session.incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t));
-        // TODO decrypt
-        ;
+
     } else if (memcmp(session.incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
-        // TODO validate authTag field
-        ;
-        // TODO decrypt
-        ;
+        // incoming nonce matches expected nonce
+        ret = mit_decrypt(packet, comp_plaintext);
+
+        if (ret != SUCCESS_RETURN) {
+            printf("error: decryption failed with error code %i\n", ret);
+            memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
+            return ERROR_RETURN;
+        }
+
     } else {
-        // don't clear 
         printf("error: Incoming nonce (seq 0x%08x) doesn't match expected nonce (seq 0x%08x)\n",
             packet->ad.nonce.sequenceNumber, session.incoming_nonce.sequenceNumber
         );

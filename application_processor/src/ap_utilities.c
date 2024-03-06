@@ -40,6 +40,9 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
 
 /********************************* UTILITIES **********************************/
 
+// TODO gross data allocation?
+uint8_t ap_plaintext[AP_PLAINTEXT_LEN];
+
 // TODO store in ecc ram?
 // TODO do we need 32 sessions? supporting only 2 component ids seems fine.
 mit_session_t sessions[32];
@@ -132,6 +135,8 @@ int swap_components(mit_comp_id_t component_id_in, mit_comp_id_t component_id_ou
 
 // Send a command to a component and receive the result
 int issue_cmd(mit_comp_id_t component_id) {
+    int ret;
+
     i2c_addr_t addr = component_id_to_i2c_addr((uint32_t)component_id);
 
     // TODO validate current tx packet belongs to stated component id
@@ -181,32 +186,34 @@ int issue_cmd(mit_comp_id_t component_id) {
 
     // if we currently have a null nonce, then trust the incoming nonce, as long as it passes authtag check.
     if (memcmp(session->incoming_nonce.rawBytes, null_nonce, sizeof(mit_nonce_t)) == 0) {
-        // TODO validate authTag field
-        ;
+        // Validate packet
+        ret = mit_decrypt(packet, ap_plaintext);
+
+        if (ret != SUCCESS_RETURN) {
+            print_error("decryption failed with error %i\n", ret);
+            memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
+            return ERROR_RETURN;
+        }
+
+        // Save nonce into session
         memcpy(session->incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t));
-        // TODO decrypt
-        ;
+
     } else if (memcmp(session->incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
-        // TODO validate authTag field
-        ;
-        // TODO decrypt
-        ;
+        // incoming nonce matches expected nonce
+        ret = mit_decrypt(packet, ap_plaintext);
+
+        if (ret != SUCCESS_RETURN) {
+            print_error("decryption failed with error %i\n", ret);
+            memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
+            return ERROR_RETURN;
+        }
+
     } else {
         print_error("Incoming nonce (seq 0x%08x) doesn't match expected nonce (seq 0x%08x)\n",
             packet->ad.nonce.sequenceNumber, session->incoming_nonce.sequenceNumber
         );
         return ERROR_RETURN;
     }
-
-    // TODO where to decrypt cipher into? dont do it in place in rx buffer
-
-    // TODO use this instead to copy in encrypted data
-    // wc_ChaCha20Poly1305_Encrypt(
-    //     shared_key, packet->ad.nonce.rawBytes,
-    //     packet->ad.rawBytes, sizeof(mit_ad_t),
-    //     data, len,
-    //     packet->message.rawBytes, packet->authTag.rawBytes
-    // );
 
     // TODO best place for this?
     // increase incoming nonce
@@ -258,8 +265,15 @@ mit_nonce_t ephemeral_nonce;
 
 /**
  * @brief Ephemeral scanner for List command
+ * 
+ * This is a mashup of make_mit_packet and issue_cmd.
+ * The reason is because both do not allow for creating / decoding
+ * packets for non-provisioned components, but we need to be
+ * able to scan for all connected devices for the List command.s
  */
 int ephemeral_handshake(mit_comp_id_t component_id) {
+    int ret;
+
     // TODO bounds check on len?
     mit_packet_t * packet = (mit_packet_t *)transmit_buffer;
 
@@ -292,18 +306,15 @@ int ephemeral_handshake(mit_comp_id_t component_id) {
 
     /****************************/
 
-    // Copy in data
-    // TODO encrypt data in place before copy? :-)
-    static uint8_t dummy = 0x55;
-    memcpy(packet->message.rawBytes, &dummy, 1);
+    // Encrypt in data
+    // Doesn't matter what we send in this message.
+    ret = mit_encrypt(packet, ap_plaintext, 1);
 
-    // TODO use this instead to copy in encrypted data
-    // wc_ChaCha20Poly1305_Encrypt(
-    //     shared_key, packet->ad.nonce.rawBytes,
-    //     packet->ad.rawBytes, sizeof(mit_ad_t),
-    //     data, len,
-    //     packet->message.rawBytes, packet->authTag.rawBytes
-    // );
+    if (ret != SUCCESS_RETURN) {
+        print_error("encryption failed with error %i\n", ret);
+        memset(packet, 0, sizeof(mit_packet_t));
+        return ERROR_RETURN;
+    }
 
     // TODO best place to increase nonce?
     if (session != NULL) {
@@ -327,8 +338,8 @@ int ephemeral_handshake(mit_comp_id_t component_id) {
 
     // TODO cleanup use of transmit_buffer, receive_buffer here. Not necessary as args?
     // Send message
-    int result = send_mit_packet(addr, (mit_packet_t *)transmit_buffer);
-    if (result == ERROR_RETURN) {
+    ret = send_mit_packet(addr, (mit_packet_t *)transmit_buffer);
+    if (ret == ERROR_RETURN) {
         // print_error("ephemeral_handshake: send_mit_packet error\n");
         return ERROR_RETURN;
     }
@@ -366,17 +377,39 @@ int ephemeral_handshake(mit_comp_id_t component_id) {
      * then decrypt and authenticate as normal, etc.
      */
     if (session == NULL) {
-        // TODO validate authTag field
-        ;
+        // Validate authTag field
+        ret = mit_decrypt(packet, ap_plaintext);
+
+        if (ret != SUCCESS_RETURN) {
+            print_error("decryption failed in ephemeral_handshake, errcode %i\n", ret);
+            memset(packet, 0, sizeof(mit_packet_t));
+            return ERROR_RETURN;
+        }
     } else {
         // if we currently have a null nonce, then trust the incoming nonce, as long as it passes authtag check.
         if (memcmp(session->incoming_nonce.rawBytes, null_nonce, sizeof(mit_nonce_t)) == 0) {
-            // TODO validate authTag field
-            ;
+            // Validate packet
+            ret = mit_decrypt(packet, ap_plaintext);
+
+            if (ret != SUCCESS_RETURN) {
+                print_error("decryption failed in ephemeral_handshake, errcode %i\n", ret);
+                memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
+                return ERROR_RETURN;
+            }
+
+            // Save nonce into session
             memcpy(session->incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t));
+
         } else if (memcmp(session->incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
-            // TODO validate authTag field
-            ;
+            // incoming nonce matches expected nonce
+            ret = mit_decrypt(packet, ap_plaintext);
+
+            if (ret != SUCCESS_RETURN) {
+                print_error("decryption failed in ephemeral_handshake, errcode %i\n", ret);
+                memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
+                return ERROR_RETURN;
+            }
+
         } else {
             print_error("Incoming nonce (seq 0x%08x) doesn't match expected nonce (seq 0x%08x)\n",
                 packet->ad.nonce.sequenceNumber, session->incoming_nonce.sequenceNumber
@@ -385,8 +418,7 @@ int ephemeral_handshake(mit_comp_id_t component_id) {
         }
     }
 
-    // We don't really need to decrypt anything here.
-
+    // Print scanned component id
     print_info("F>0x%08x\n", packet->ad.comp_id);
 
     // TODO best place for this?
@@ -409,6 +441,8 @@ int ephemeral_handshake(mit_comp_id_t component_id) {
  * @param len: uint8_t, len of data to copy into message field
  */
 int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * data, uint8_t len) {
+    int ret;
+
     // TODO bounds check on len?
     mit_packet_t * packet = (mit_packet_t *)transmit_buffer;
 
@@ -439,17 +473,13 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
     }
     /****************************/
 
-    // Copy in data
-    // TODO encrypt data in place before copy? :-)
-    memcpy(packet->message.rawBytes, data, len);
+    ret = mit_encrypt(packet, data, len);
 
-    // TODO use this instead to copy in encrypted data
-    // wc_ChaCha20Poly1305_Encrypt(
-    //     shared_key, packet->ad.nonce.rawBytes,
-    //     packet->ad.rawBytes, sizeof(mit_ad_t),
-    //     data, len,
-    //     packet->message.rawBytes, packet->authTag.rawBytes
-    // );
+    if (ret != SUCCESS_RETURN) {
+        print_error("encryption failed with error %i\n", ret);
+        memset(packet, 0, sizeof(mit_packet_t)); // clear packet
+        return ERROR_RETURN;
+    }
 
     // TODO best place to increase nonce?
     session->outgoing_nonce.sequenceNumber += 1;

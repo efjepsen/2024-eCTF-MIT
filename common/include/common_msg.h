@@ -9,10 +9,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-// TODO replace with CHACHA20_POLY1305_AEAD_IV_SIZE
-#define MIT_NONCE_SIZE 12
-// TODO replace with CHACHA20_POLY1305_AEAD_AUTHTAG_SIZE
-#define MIT_AUTHTAG_SIZE 16
+#include <wolfssl/wolfcrypt/chacha20_poly1305.h>
+
+#define MIT_KEY_SIZE CHACHA20_POLY1305_AEAD_KEYSIZE
+#define MIT_NONCE_SIZE CHACHA20_POLY1305_AEAD_IV_SIZE
+#define MIT_AUTHTAG_SIZE CHACHA20_POLY1305_AEAD_AUTHTAG_SIZE
 
 #define MIT_MAX_PACKET_LEN 256
 #define MIT_MAX_MSG_LEN (MIT_MAX_PACKET_LEN - sizeof(mit_ad_t) - sizeof(mit_authtag_t))

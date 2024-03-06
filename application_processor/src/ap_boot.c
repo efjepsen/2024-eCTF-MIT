@@ -77,7 +77,7 @@ int boot_components() {
         mit_packet_t * packet = get_rx_packet();
 
         // Print boot message from component
-        print_info("0x%08x>%s\n", packet->ad.comp_id, packet->message.rawBytes);
+        print_info("0x%08x>%s\n", packet->ad.comp_id, ap_plaintext);
     }
     return SUCCESS_RETURN;
 }

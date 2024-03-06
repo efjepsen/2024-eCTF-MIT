@@ -19,6 +19,9 @@ IPATH+=../common/include
 VPATH+=../wolfssl/wolfcrypt/src
 IPATH+=../wolfssl
 
+PROJ_CFLAGS += -DHAVE_CHACHA
+PROJ_CFLAGS += -DHAVE_POLY1305
+
 #################################################
 ## From eCTF Crypto Example in Makefile
 PROJ_CFLAGS += -DMXC_ASSERT_ENABLE

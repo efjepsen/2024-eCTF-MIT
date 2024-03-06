@@ -42,7 +42,7 @@ int attest_component(uint32_t component_id) {
 
     // Print out attestation data 
     print_info("C>0x%08x\n", packet->ad.comp_id);
-    print_info("%s", packet->message.rawBytes);
+    print_info("%s", ap_plaintext);
     return SUCCESS_RETURN;
 }
 

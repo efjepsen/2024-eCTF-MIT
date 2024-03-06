@@ -6,6 +6,11 @@
 #ifndef _AP_COMMON_H_
 #define _AP_COMMON_H_
 
+#include <stdint.h>
+
+#define AP_PLAINTEXT_LEN 256
+extern uint8_t ap_plaintext[AP_PLAINTEXT_LEN];
+
 // MITRE-provided headers
 #include "board_link.h"
 #include "host_messaging.h"
@@ -17,6 +22,7 @@
 #include "global_secrets.h"
 
 // Common AP+Component headers
+#include "common_crypto.h"
 #include "common_init.h"
 #include "common_msg.h"
 #include "simple_trng.h"
