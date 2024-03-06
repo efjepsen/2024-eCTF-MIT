@@ -7,13 +7,13 @@
 
 // Attest a component if the PIN is correct
 void attempt_attest() {
-    char buf[50];
+    char * buf = get_uart_buf();
 
     if (validate_pin()) {
         return;
     }
     uint32_t component_id;
-    recv_input("Component ID: ", buf);
+    recv_input("Component ID: ", 8);
     sscanf(buf, "%x", &component_id);
     if (attest_component(component_id) == SUCCESS_RETURN) {
         print_success("Attest\n");
@@ -48,8 +48,8 @@ int attest_component(uint32_t component_id) {
 
 // Compare the entered PIN to the correct PIN
 int validate_pin(void) {
-    char buf[50];
-    recv_input("Enter pin: ", buf);
+    char * buf = get_uart_buf();
+    recv_input("Enter pin: ", 6);
     if (!strcmp(buf, AP_PIN)) {
         print_debug("Pin Accepted!\n");
         return SUCCESS_RETURN;

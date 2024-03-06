@@ -75,9 +75,9 @@ int main() {
     init();
 
     // Handle commands forever
-    char buf[UART_MAX_LEN];
+    char * buf = get_uart_buf();
     while (1) {
-        recv_input("Enter Command: ", buf);
+        recv_input("Enter Command: ", 10);
 
         // Execute requested command
         if (!strcmp(buf, "list")) {

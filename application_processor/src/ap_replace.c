@@ -7,7 +7,7 @@
 
 // Replace a component if the PIN is correct
 void attempt_replace() {
-    char buf[50];
+    char * buf = get_uart_buf();
 
     if (validate_token()) {
         return;
@@ -16,9 +16,9 @@ void attempt_replace() {
     uint32_t component_id_in = 0;
     uint32_t component_id_out = 0;
 
-    recv_input("Component ID In: ", buf);
+    recv_input("Component ID In: ", 8);
     sscanf(buf, "%x", &component_id_in);
-    recv_input("Component ID Out: ", buf);
+    recv_input("Component ID Out: ", 8);
     sscanf(buf, "%x", &component_id_out);
 
     if (swap_components(component_id_in, component_id_out) == ERROR_RETURN) {
@@ -35,8 +35,8 @@ void attempt_replace() {
 
 // Function to validate the replacement token
 int validate_token() {
-    char buf[50];
-    recv_input("Enter token: ", buf);
+    char * buf = get_uart_buf();
+    recv_input("Enter token: ", 16);
     if (!strcmp(buf, AP_TOKEN)) {
         print_debug("Token Accepted!\n");
         return SUCCESS_RETURN;
