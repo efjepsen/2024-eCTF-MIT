@@ -110,6 +110,13 @@ void flash_first_boot(void) {
 
 // Swap component IN with component OUT
 int swap_components(mit_comp_id_t component_id_in, mit_comp_id_t component_id_out) {
+    // Ensure that component_id_in is not already provisioned
+    for (unsigned i = 0; i < flash_status.component_cnt; i++) {
+        if (flash_status.component_ids[i] == component_id_in) {
+            return ERROR_RETURN;
+        }
+    }
+
     // Find the component to swap out
     for (unsigned i = 0; i < flash_status.component_cnt; i++) {
         if (flash_status.component_ids[i] == component_id_out) {

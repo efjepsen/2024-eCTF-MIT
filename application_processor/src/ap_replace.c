@@ -22,9 +22,8 @@ void attempt_replace() {
     sscanf(buf, "%x", &component_id_out);
 
     if (swap_components(component_id_in, component_id_out) == ERROR_RETURN) {
-        // Component Out was not found
-        print_error("Component 0x%08x is not provisioned for the system\r\n",
-                component_id_out);
+        print_error("Cannot replace component 0x%08x with component 0x%08x\n",
+            component_id_out, component_id_in);
         return;
     }
 
