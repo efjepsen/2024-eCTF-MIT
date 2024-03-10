@@ -180,17 +180,28 @@ int i2c_simple_write_transmit_len(i2c_addr_t addr, uint8_t len) {
 */
 int i2c_simple_read_data_generic(i2c_addr_t addr, ECTF_I2C_REGS reg, uint8_t len, uint8_t* buf)
 {
+    int ret;
+    uint8_t packet[256];
+
     mxc_i2c_req_t request;
     request.i2c = I2C_INTERFACE;
     request.addr = addr;
     request.tx_len = 1;
     request.tx_buf = (uint8_t*)&reg;
     request.rx_len = (unsigned int) len;
-    request.rx_buf = buf;
+    request.rx_buf = packet;
     request.restart = 0;
     request.callback = NULL;
 
-    return MXC_I2C_MasterTransaction(&request);
+    ret = MXC_I2C_MasterTransaction(&request);
+
+    if (ret < 0) {
+        return ret;
+    }
+
+    // Copy into user-buf on success
+    memcpy(buf, packet, len);
+    return ret;
 }
 
 /**
