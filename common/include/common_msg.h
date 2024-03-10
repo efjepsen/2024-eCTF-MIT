@@ -18,8 +18,13 @@
 #define MIT_MAX_PACKET_LEN 256
 #define MIT_MAX_MSG_LEN (MIT_MAX_PACKET_LEN - sizeof(mit_ad_t) - sizeof(mit_authtag_t))
 
+/********** GLOBALS **********/
+extern uint8_t null_nonce[MIT_NONCE_SIZE];
+
+/********** DATA TYPES **********/
 typedef enum {
     MIT_CMD_NONE,
+    MIT_CMD_INIT,
     MIT_CMD_VALIDATE,
     MIT_CMD_BOOT,
     MIT_CMD_ATTEST,
@@ -52,9 +57,19 @@ typedef struct __attribute__((packed)) {
     uint8_t rawBytes[MIT_AUTHTAG_SIZE];
 } mit_authtag_t;
 
+// MIT_CMD_INIT packet data
+typedef union __attribute__((packed)) {
+    struct __attribute__((packed)){
+        mit_nonce_t ap_nonce;
+        mit_nonce_t component_nonce;
+    };
+    uint8_t rawBytes[2*sizeof(mit_nonce_t)];
+} mit_message_init_t;
+
 // Message section of packet
 typedef union __attribute__((packed)) {
     uint32_t component_id;
+    mit_message_init_t init;
     uint8_t rawBytes[MIT_MAX_MSG_LEN];
 } mit_message_t;
 
@@ -69,10 +84,16 @@ typedef union __attribute__((packed)) {
 } mit_packet_t;
 
 // Session structure
-typedef struct __attribute__((packed)) {
-    mit_comp_id_t component_id;
-    mit_nonce_t outgoing_nonce;
-    mit_nonce_t incoming_nonce;
+typedef union __attribute__((packed)) {
+    struct __attribute__((packed)) {
+        mit_comp_id_t component_id;
+        mit_nonce_t outgoing_nonce;
+        mit_nonce_t incoming_nonce;
+    };
+    uint8_t rawBytes[(2*sizeof(mit_nonce_t)) + sizeof(mit_comp_id_t)];
 } mit_session_t;
+
+/********** FUNCTIONS **********/
+void increment_nonce(mit_nonce_t * nonce);
 
 #endif

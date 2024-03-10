@@ -33,6 +33,7 @@ extern uint8_t ap_plaintext[AP_PLAINTEXT_LEN];
 #include "ap_list.h"
 #include "ap_postboot.h"
 #include "ap_replace.h"
+#include "ap_session.h"
 #include "ap_utilities.h"
 
 #include "return_codes.h"

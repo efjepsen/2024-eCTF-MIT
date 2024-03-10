@@ -79,14 +79,9 @@ uint8_t comp_plaintext[COMP_PLAINTEXT_LEN];
 
 mit_session_t session;
 
-// TODO replace with CHACHA20_POLY1305_AEAD_IV_SIZE
-uint8_t null_nonce[MIT_NONCE_SIZE] = {0};
-
 void session_init(void) {
     // Initialize nonce's to {0}.
-    session.component_id = 0;
-    memset(session.outgoing_nonce.rawBytes, 0, MIT_NONCE_SIZE);
-    memset(session.incoming_nonce.rawBytes, 0, MIT_NONCE_SIZE);
+    memset(session.rawBytes, 0, sizeof(mit_session_t));
 
     // Initialize outgoing nonce to some random value
     while (memcmp(session.outgoing_nonce.rawBytes, null_nonce, MIT_NONCE_SIZE) == 0) {
@@ -94,6 +89,9 @@ void session_init(void) {
     }
 }
 
+bool valid_session(void) {
+    return (memcmp(session.incoming_nonce.rawBytes, null_nonce, sizeof(mit_nonce_t)) != 0);
+}
 
 void set_ad(mit_packet_t * packet, mit_comp_id_t comp_id, mit_opcode_t opcode, uint8_t len) {
     // TODO limits check on len?
@@ -149,7 +147,7 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
     }
 
     // TODO best place to increase nonce?
-    session.outgoing_nonce.sequenceNumber += 1;
+    increment_nonce(&session.outgoing_nonce);
 
     return SUCCESS_RETURN;
 }
@@ -223,6 +221,11 @@ int component_process_cmd() {
     int ret;
     mit_packet_t * packet = (mit_packet_t *) receive_buffer;
 
+    // Can't hurt to check, just once more.
+    if (!valid_session()) {
+        return ERROR_RETURN;
+    }
+
     /*************** VALIDATE RECEIVED PACKET ****************/
     if (packet->ad.comp_id != COMPONENT_ID) {
         printf("error: rx packet (0x%08x) doesn't match given component id (0x%08x)\n", packet->ad.comp_id, COMPONENT_ID);
@@ -240,9 +243,8 @@ int component_process_cmd() {
         return ERROR_RETURN;
     }
 
-    // if we currently have a null nonce, then trust the incoming nonce, as long as it passes authtag check.
-    if (memcmp(session.incoming_nonce.rawBytes, null_nonce, sizeof(mit_nonce_t)) == 0) {
-        // Validate authTag field
+    // Validate incoming nonce matches expected nonce
+    if (memcmp(session.incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
         ret = mit_decrypt(packet, comp_plaintext);
 
         if (ret != SUCCESS_RETURN) {
@@ -250,20 +252,6 @@ int component_process_cmd() {
             memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
             return ERROR_RETURN;
         }
-
-        // Save nonce into session
-        memcpy(session.incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t));
-
-    } else if (memcmp(session.incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
-        // incoming nonce matches expected nonce
-        ret = mit_decrypt(packet, comp_plaintext);
-
-        if (ret != SUCCESS_RETURN) {
-            printf("error: decryption failed with error code %i\n", ret);
-            memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
-            return ERROR_RETURN;
-        }
-
     } else {
         printf("error: Incoming nonce (seq 0x%08x) doesn't match expected nonce (seq 0x%08x)\n",
             packet->ad.nonce.sequenceNumber, session.incoming_nonce.sequenceNumber
@@ -272,8 +260,7 @@ int component_process_cmd() {
     }
 
     // TODO best place for this?
-    // increase incoming nonce
-    session.incoming_nonce.sequenceNumber += 1;
+    increment_nonce(&session.incoming_nonce);
 
     // Output to application processor dependent on command received
     switch (packet->ad.opcode) {
@@ -344,6 +331,80 @@ int process_attest() {
     return SUCCESS_RETURN;
 }
 
+int process_init_session() {
+    // Just double-check :)
+    if (valid_session()) {
+        return ERROR_RETURN;
+    }
+
+    int ret;
+    mit_packet_t * packet = (mit_packet_t *) receive_buffer;
+
+    printf("process_init_session\n");
+
+    /*************** VALIDATE RECEIVED PACKET ****************/
+    if (packet->ad.comp_id != COMPONENT_ID) {
+        printf("error: rx packet (0x%08x) doesn't match given component id (0x%08x)\n", packet->ad.comp_id, COMPONENT_ID);
+        return ERROR_RETURN;
+    }
+
+    // TODO use ifdefs for this section
+    if (packet->ad.for_ap != false) {
+        printf("error: rx packet not tagged for component\n");
+        return ERROR_RETURN;
+    }
+
+    if (packet->ad.len != sizeof(mit_message_init_t)) {
+        printf("error: rx packet has incorrect message length\n");
+        return ERROR_RETURN;
+    }
+
+    if (packet->ad.opcode != MIT_CMD_INIT) {
+        printf("error: rx packet has non-init opcode\n");
+        return ERROR_RETURN;
+    }
+
+    // Validate authTag field
+    ret = mit_decrypt(packet, comp_plaintext);
+    if (ret != SUCCESS_RETURN) {
+        printf("error: decryption failed with error code %i\n", ret);
+        memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
+        return ERROR_RETURN;
+    }
+
+    mit_message_init_t * received = (mit_message_init_t *)comp_plaintext;
+    if (memcmp(packet->ad.nonce.rawBytes, received->ap_nonce.rawBytes, sizeof(mit_nonce_t)) != 0) {
+        // If packet's nonce, and the message's ap_nonce don't match, ignore.
+        return ERROR_RETURN;
+    }
+
+    // Save incoming nonce
+    memcpy(session.incoming_nonce.rawBytes, received->ap_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    /***** Send init response back *****/
+    // Copy our nonce into response message
+    mit_message_init_t * outgoing = (mit_message_init_t *)comp_plaintext;
+    memcpy(outgoing->component_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    packet = (mit_packet_t *)transmit_buffer;
+    set_ad(packet, COMPONENT_ID, MIT_CMD_INIT, sizeof(mit_message_init_t));
+    memcpy(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    ret = mit_encrypt(packet, comp_plaintext, sizeof(mit_message_init_t));
+    if (ret != SUCCESS_RETURN) {
+        printf("encryption failed with error code %i\n", ret);
+        memset(packet, 0, sizeof(mit_packet_t));
+        return ERROR_RETURN;
+    }
+
+    // TODO best place for this?
+    increment_nonce(&session.outgoing_nonce);
+    increment_nonce(&session.incoming_nonce);
+
+    send_packet_and_ack(packet);
+    return SUCCESS_RETURN;
+}
+
 /*********************************** MAIN *************************************/
 
 int main(void) {
@@ -372,8 +433,13 @@ int main(void) {
             continue;
         }
 
-        // Normal command processing
-        ret = component_process_cmd();
+        if (valid_session()) {
+            // Normal command processing
+            ret = component_process_cmd();
+        } else {
+            // Special handling while waiting for init
+            ret = process_init_session();
+        }
 
         // Send one-byte ack if command is invalid.
         if (ret != SUCCESS_RETURN) {

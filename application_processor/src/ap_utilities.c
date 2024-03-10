@@ -43,38 +43,6 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
 // TODO gross data allocation?
 uint8_t ap_plaintext[AP_PLAINTEXT_LEN];
 
-// TODO store in ecc ram?
-// TODO do we need 32 sessions? supporting only 2 component ids seems fine.
-mit_session_t sessions[32];
-
-// TODO replace with CHACHA20_POLY1305_AEAD_IV_SIZE
-uint8_t null_nonce[MIT_NONCE_SIZE] = {0};
-
-void session_init(void) {
-    // Copy stored component_ids into sessions.
-    // Initialize nonce's to {0}.
-    for (int i = 0; i < get_num_components(); i++) {
-        sessions[i].component_id = get_component_id(i);
-        memset(sessions[i].outgoing_nonce.rawBytes, 0, sizeof(mit_nonce_t));
-        memset(sessions[i].incoming_nonce.rawBytes, 0, sizeof(mit_nonce_t));
-
-        // Initialize outgoing nonces to some random value
-        while (memcmp(sessions[i].outgoing_nonce.rawBytes, null_nonce, sizeof(mit_nonce_t)) == 0) {
-            get_rand_bytes(sessions[i].outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
-        }
-    }
-}
-
-mit_session_t * get_session_of_component(mit_comp_id_t component_id) {
-    for (int i = 0; i < get_num_components(); i++) {
-        if (sessions[i].component_id == component_id) {
-            return &sessions[i];
-        }
-    }
-
-    return NULL;
-}
-
 // Return number of provisioned components
 int get_num_components(void) {
     return flash_status.component_cnt;
@@ -124,10 +92,15 @@ int swap_components(mit_comp_id_t component_id_in, mit_comp_id_t component_id_ou
             flash_status.component_ids[i] = component_id_in;
 
             // Reset session info
-            sessions[i].component_id = component_id_in;
-            memset(sessions[i].outgoing_nonce.rawBytes, 0, sizeof(mit_nonce_t));
-            memset(sessions[i].incoming_nonce.rawBytes, 0, sizeof(mit_nonce_t));
-            get_rand_bytes(sessions[i].outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+            mit_session_t * session = get_session_of_component(component_id_in);
+            if (session == NULL) {
+                return ERROR_RETURN;
+            }
+
+            memset(session->rawBytes, 0, sizeof(mit_session_t));
+            session->component_id = component_id_in;
+            get_rand_bytes(session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+            memset(session->incoming_nonce.rawBytes, 0, sizeof(mit_nonce_t));
 
             // write updated component_ids to flash
             flash_simple_erase_page(FLASH_ADDR);
@@ -145,6 +118,12 @@ int issue_cmd(mit_comp_id_t component_id) {
     int ret;
 
     i2c_addr_t addr = component_id_to_i2c_addr((uint32_t)component_id);
+
+    ret = validate_session(component_id);
+    if (ret != SUCCESS_RETURN) {
+        print_error("issue_cmd: validate_session failed\n");
+        return ERROR_RETURN;
+    }
 
     // TODO validate current tx packet belongs to stated component id
     mit_packet_t * packet = get_tx_packet();
@@ -186,14 +165,15 @@ int issue_cmd(mit_comp_id_t component_id) {
         return ERROR_RETURN;
     }
 
+    // TODO validate opcode!
+
     mit_session_t * session = get_session_of_component(component_id);
     if (session == NULL) {
         print_error("Session not found for component id 0x%08x\n", component_id);
     }
 
-    // if we currently have a null nonce, then trust the incoming nonce, as long as it passes authtag check.
-    if (memcmp(session->incoming_nonce.rawBytes, null_nonce, sizeof(mit_nonce_t)) == 0) {
-        // Validate packet
+    // Validate incoming nonce matches expected nonce
+    if (memcmp(session->incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
         ret = mit_decrypt(packet, ap_plaintext);
 
         if (ret != SUCCESS_RETURN) {
@@ -201,20 +181,6 @@ int issue_cmd(mit_comp_id_t component_id) {
             memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
             return ERROR_RETURN;
         }
-
-        // Save nonce into session
-        memcpy(session->incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t));
-
-    } else if (memcmp(session->incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
-        // incoming nonce matches expected nonce
-        ret = mit_decrypt(packet, ap_plaintext);
-
-        if (ret != SUCCESS_RETURN) {
-            print_error("decryption failed with error %i\n", ret);
-            memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
-            return ERROR_RETURN;
-        }
-
     } else {
         print_error("Incoming nonce (seq 0x%08x) doesn't match expected nonce (seq 0x%08x)\n",
             packet->ad.nonce.sequenceNumber, session->incoming_nonce.sequenceNumber
@@ -224,7 +190,7 @@ int issue_cmd(mit_comp_id_t component_id) {
 
     // TODO best place for this?
     // increase incoming nonce
-    session->incoming_nonce.sequenceNumber += 1;
+    increment_nonce(&session->incoming_nonce);
 
     /********************************************************/
 
@@ -276,6 +242,13 @@ bool is_valid_component(mit_comp_id_t component_id) {
  */
 int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * data, uint8_t len) {
     int ret;
+
+    // TODO best place for validate_session?
+    ret = validate_session(component_id);
+    if (ret != SUCCESS_RETURN) {
+        print_error("Failed to validate session for component id 0x%08x\n", component_id);
+        return ERROR_RETURN;
+    }
 
     // TODO bounds check on len?
     mit_packet_t * packet = (mit_packet_t *)transmit_buffer;

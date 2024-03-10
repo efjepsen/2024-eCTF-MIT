@@ -100,7 +100,7 @@ int main() {
             for (int i = 0; i < get_num_components(); i++) {
                 mit_comp_id_t component_id = get_component_id(i);
                 mit_session_t * session = get_session_of_component(component_id);
-                printf("component_id: 0x%08x\n");
+                printf("component_id: 0x%08x\n", component_id);
                 printf("  session.component_id: 0x%08x\n", session->component_id);
                 printf("  session.outgoing_nonce: 0x");
                 print_hex(session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
