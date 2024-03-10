@@ -20,7 +20,6 @@
 
 typedef enum {
     MIT_CMD_NONE,
-    MIT_CMD_SCAN,
     MIT_CMD_VALIDATE,
     MIT_CMD_BOOT,
     MIT_CMD_ATTEST,

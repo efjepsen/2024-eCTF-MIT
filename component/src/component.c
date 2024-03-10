@@ -218,33 +218,11 @@ void boot() {
     #endif
 }
 
-void send_ack();
-
 // Handle a transaction from the AP
 int component_process_cmd() {
     int ret;
     mit_packet_t * packet = (mit_packet_t *) receive_buffer;
 
-    // Special handling for scan commands in non-established session
-    if (packet->ad.comp_id != COMPONENT_ID) {                       // if not an established session
-        if ((packet->ad.comp_id & 0xff) == (COMPONENT_ID & 0xff)) { // but addressed to us
-            if (packet->ad.opcode == MIT_CMD_SCAN) {                // and is a scan
-                if (packet->ad.for_ap == false) {                   // and is not for AP
-                    if (packet->ad.len != 0) {                      // and has length
-                        if (mit_decrypt(packet, comp_plaintext) == SUCCESS_RETURN) { // and is valid!
-                            return process_scan();                  // process scan
-                        } else {
-                            printf("error: decryption failed for ephemeral scan request\n");
-                            memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
-                            return ERROR_RETURN;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // TODO validate received packet
     /*************** VALIDATE RECEIVED PACKET ****************/
     if (packet->ad.comp_id != COMPONENT_ID) {
         printf("error: rx packet (0x%08x) doesn't match given component id (0x%08x)\n", packet->ad.comp_id, COMPONENT_ID);
@@ -301,8 +279,6 @@ int component_process_cmd() {
     switch (packet->ad.opcode) {
     case MIT_CMD_BOOT:
         return process_boot();
-    case MIT_CMD_SCAN:
-        return process_scan();
     case MIT_CMD_VALIDATE:
         return process_validate();
     case MIT_CMD_ATTEST:
@@ -334,22 +310,6 @@ int process_boot() {
 
     // We should never reach this.
     return ERROR_RETURN;
-}
-
-
-int process_scan() {
-    // The AP requested a scan. Respond with the Component ID
-
-    // TODO gross data allocation
-    mit_comp_id_t component_id = COMPONENT_ID;
-    int ret = make_mit_packet(COMPONENT_ID, MIT_CMD_SCAN, &component_id, sizeof(mit_comp_id_t));
-
-    if (ret != SUCCESS_RETURN) {
-        return ret;
-    }
-
-    send_packet_and_ack((mit_packet_t *)transmit_buffer);
-    return SUCCESS_RETURN;
 }
 
 int process_validate() {
@@ -400,10 +360,23 @@ int main(void) {
     
     LED_On(LED2);
 
-    while (1) {
-        wait_and_receive_packet(receive_buffer);
+    int len, ret;
 
-        if (component_process_cmd() != SUCCESS_RETURN) {
+    while (1) {
+        // Wait for a packet
+        len = wait_and_receive_packet(receive_buffer);
+
+        // Special handling for scan commands
+        if (len == sizeof(mit_comp_id_t)) {
+            send_scan_and_ack(COMPONENT_ID);
+            continue;
+        }
+
+        // Normal command processing
+        ret = component_process_cmd();
+
+        // Send one-byte ack if command is invalid.
+        if (ret != SUCCESS_RETURN) {
             send_ack();
         }
     }

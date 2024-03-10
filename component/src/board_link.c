@@ -59,6 +59,16 @@ void send_packet_and_ack(mit_packet_t * packet) {
     I2C_REGS[RECEIVE_DONE][0] = false;
 }
 
+void send_scan_and_ack(mit_comp_id_t component_id) {
+    I2C_REGS[TRANSMIT_LEN][0] = sizeof(mit_comp_id_t);
+    memcpy((void *)I2C_REGS[TRANSMIT], &component_id, sizeof(mit_comp_id_t));
+    I2C_REGS[TRANSMIT_DONE][0] = false;
+
+    // Wait for ack from AP
+    while(!I2C_REGS[TRANSMIT_DONE][0]);
+    I2C_REGS[RECEIVE_DONE][0] = false;
+}
+
 /**
  * @brief Send a null packet to the AP
  * 
@@ -66,11 +76,10 @@ void send_packet_and_ack(mit_packet_t * packet) {
  * send a bad packet to the AP.
 */
 void send_ack(void) {
-    // TODO gross len calculation
-    static uint8_t len = 1;
-    static uint8_t dummy = 0x1;
-    I2C_REGS[TRANSMIT_LEN][0] = len;
-    memcpy((void*)I2C_REGS[TRANSMIT], &dummy, len);
+    // Send 0xff, which will always get parsed as an invalid packet,
+    // in case the receiving end has bad rx buffer management.
+    I2C_REGS[TRANSMIT_LEN][0] = 1;
+    I2C_REGS[TRANSMIT][0] = 0xff; // invalid opcode
     I2C_REGS[TRANSMIT_DONE][0] = false;
 
     // Wait for ack from AP

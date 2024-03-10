@@ -58,6 +58,16 @@ i2c_addr_t component_id_to_i2c_addr(uint32_t component_id);
 void send_packet_and_ack(mit_packet_t * packet);
 
 /**
+ * @brief Send component ID to the AP and wait for ACK
+ * 
+ * @param message: mit_comp_id_t, the component id to be sent
+ * 
+ * This function utilizes the simple_i2c_peripheral library to
+ * send the component id to the AP and wait for the message to be received
+*/
+void send_scan_and_ack(mit_comp_id_t component_id);
+
+/**
  * @brief Send a null packet to the AP
  * 
  * This function utilizes the simple_i2c_peripheral library to
