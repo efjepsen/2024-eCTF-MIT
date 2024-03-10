@@ -19,8 +19,15 @@ IPATH+=../common/include
 VPATH+=../wolfssl/wolfcrypt/src
 IPATH+=../wolfssl
 
+# Enable ChaCha20Poly1305 in wolfSSL
 PROJ_CFLAGS += -DHAVE_CHACHA
 PROJ_CFLAGS += -DHAVE_POLY1305
+
+# wolfSSL hardening
+PROJ_CFLAGS += -DTFM_TIMING_RESISTANT
+PROJ_CFLAGS += -DECC_TIMING_RESISTANT
+PROJ_CFLAGS += -DWC_RSA_BLINDING
+
 
 #################################################
 ## From eCTF Crypto Example in Makefile
