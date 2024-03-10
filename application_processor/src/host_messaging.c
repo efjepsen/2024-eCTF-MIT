@@ -36,7 +36,7 @@ void recv_input(const char *msg, uint8_t max) {
 
     // Read one character at a time until newline or EOF
     int idx = 0, c = 0;
-    while ((c = getchar()) != '\n' && c != EOF) {
+    while (((c = getchar()) != '\n') && (c != EOF) && (idx < max - 1)) {
         // max - 1 so we can always append the null-byte later
         uart_buf[idx % (max - 1)] = (char)c;
         idx++;
