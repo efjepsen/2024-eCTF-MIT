@@ -9,7 +9,11 @@
  * @brief Initialize TRNG hardware 
  */
 void simple_trng_init(void) {
-    MXC_TRNG_Init();
+    int ret = MXC_TRNG_Init();
+    if (ret != 0) {
+        printf("simple_trng_init failed with errcode %i\n", ret);
+        while (1) { ; }
+    }
 }
 
 /**
