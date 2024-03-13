@@ -60,8 +60,6 @@
 // Core function definitions
 int component_process_cmd(void);
 int process_boot(void);
-int process_scan(void);
-int process_validate(void);
 int process_attest(void);
 
 /********************************* GLOBAL VARIABLES **********************************/
@@ -302,10 +300,8 @@ int component_process_cmd() {
 
     // Output to application processor dependent on command received
     switch (packet->ad.opcode) {
-    case MIT_CMD_BOOT:
+    case MIT_CMD_BOOTREQ:
         return process_boot();
-    case MIT_CMD_VALIDATE:
-        return process_validate();
     case MIT_CMD_ATTESTREQ:
         return process_attest();
     default:
@@ -316,21 +312,66 @@ int component_process_cmd() {
 
 int process_boot() {
     int ret;
-    // The AP requested a boot. Set `component_boot` for the main loop and
-    // respond with the boot message
-    ret = validate_packet(MIT_CMD_BOOT);
+    uint8_t len;
+    mit_challenge_t r1, r2;
+    mit_message_t * message = (mit_message_t *)comp_plaintext;
+
+    mit_packet_t * packet = (mit_packet_t *) receive_buffer;
+
+    // Step 0: validate packet again :-)
+    ret = validate_packet(MIT_CMD_BOOTREQ);
     if (ret != SUCCESS_RETURN) {
         printf("validation failed\n");
         return ERROR_RETURN;
     }
 
-    // Copy boot message into message & create packet
+    ret = mit_decrypt(packet, comp_plaintext);
+    if (ret != SUCCESS_RETURN) {
+        printf("decryption failed\n");
+        return ERROR_RETURN;
+    }
 
-    // TODO gross data allocation ?
-    // TODO +1 needed ?
-    uint8_t len = sprintf((char *)working_buffer, "%s", COMPONENT_BOOT_MSG) + 1;
-    ret = make_mit_packet(COMPONENT_ID, MIT_CMD_BOOT, working_buffer, len);
+    // Step 1: Generate random challenge r2
+    get_random_challenge(&r2);
 
+    // Step 2: Store r2 in response packet
+    memcpy(message->bootReq.r2.rawBytes, r2.rawBytes, sizeof(mit_challenge_t));
+
+    // Step 3: Send response packet
+    ret = make_mit_packet(COMPONENT_ID, MIT_CMD_BOOTREQ, message->bootReq.rawBytes, sizeof(mit_message_bootreq_t));
+    if (ret != SUCCESS_RETURN) {
+        return ret;
+    }
+
+    send_packet_and_ack((mit_packet_t *)transmit_buffer);
+
+    // Step 4: Wait to receive a packet
+    len = wait_and_receive_packet(receive_buffer);
+    if (len <= sizeof(mit_comp_id_t)) {
+        return ERROR_RETURN;
+    }
+
+    // Step 5: Validate packet
+    ret = validate_packet(MIT_CMD_BOOT);
+    if (ret != SUCCESS_RETURN) {
+        return ERROR_RETURN;
+    }
+
+    ret = mit_decrypt(packet, comp_plaintext);
+    if (ret != SUCCESS_RETURN) {
+        return ERROR_RETURN;
+    }
+
+    // Step 6: Validate r2 in attest response
+    if (memcmp(message->boot.r2.rawBytes, r2.rawBytes, sizeof(mit_challenge_t)) != 0) {
+        return ERROR_RETURN;
+    }
+
+    // Step 7: Stuff with boot message
+    memset(message->boot.rawBytes, 0, sizeof(mit_message_boot_t));
+    len = sprintf(message->boot.bootMsg, "%s", COMPONENT_BOOT_MSG) + 1;
+
+    ret = make_mit_packet(COMPONENT_ID, MIT_CMD_BOOT, message->boot.rawBytes, sizeof(mit_message_boot_t));
     if (ret != SUCCESS_RETURN) {
         return ret;
     }
@@ -343,27 +384,6 @@ int process_boot() {
     return ERROR_RETURN;
 }
 
-int process_validate() {
-    int ret;
-    // The AP requested a validation. Respond with the Component ID
-    ret = validate_packet(MIT_CMD_VALIDATE);
-    if (ret != SUCCESS_RETURN) {
-        printf("validation failed\n");
-        return ERROR_RETURN;
-    }
-
-    // TODO gross data allocation ?
-    mit_comp_id_t component_id = COMPONENT_ID;
-    ret = make_mit_packet(COMPONENT_ID, MIT_CMD_VALIDATE, &component_id, sizeof(mit_comp_id_t));
-
-    if (ret != SUCCESS_RETURN) {
-        return ret;
-    }
-
-    send_packet_and_ack((mit_packet_t *)transmit_buffer);
-    return SUCCESS_RETURN;
-}
-
 int process_attest() {
     int ret;
     uint8_t len;
@@ -372,7 +392,6 @@ int process_attest() {
     mit_packet_t * packet = (mit_packet_t *) receive_buffer;
 
     // Step 0: validate packet again :-)
-    printf("step 0\n");
     ret = validate_packet(MIT_CMD_ATTESTREQ);
     if (ret != SUCCESS_RETURN) {
         printf("validation failed\n");

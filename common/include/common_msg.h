@@ -27,10 +27,10 @@ extern uint8_t null_nonce[MIT_NONCE_SIZE];
 typedef enum {
     MIT_CMD_NONE,
     MIT_CMD_INIT,
-    MIT_CMD_VALIDATE,
-    MIT_CMD_BOOT,
     MIT_CMD_ATTEST,
     MIT_CMD_ATTESTREQ,
+    MIT_CMD_BOOT,
+    MIT_CMD_BOOTREQ,
 } mit_opcode_t;
 
 typedef uint32_t mit_comp_id_t;
@@ -90,12 +90,30 @@ typedef union __attribute__((packed)) {
     uint8_t rawBytes[MIT_MAX_MSG_LEN];
 } mit_message_attest_t;
 
+// MIT_CMD_BOOTREQ packet data
+typedef union __attribute__((packed)) {
+    struct __attribute__((packed)){
+        mit_challenge_t r1;
+        mit_challenge_t r2;
+    };
+    uint8_t rawBytes[2*sizeof(mit_challenge_t)];
+} mit_message_bootreq_t;
+
+// MIT_CMD_BOOT packet data
+typedef union __attribute__((packed)) {
+    mit_challenge_t r2;
+    char bootMsg[MIT_MAX_MSG_LEN];
+    uint8_t rawBytes[MIT_MAX_MSG_LEN];
+} mit_message_boot_t;
+
 // Message section of packet
 typedef union __attribute__((packed)) {
     uint32_t component_id;
     mit_message_init_t init;
     mit_message_attest_t attest;
     mit_message_attestreq_t attestReq;
+    mit_message_boot_t boot;
+    mit_message_bootreq_t bootReq;
     uint8_t rawBytes[MIT_MAX_MSG_LEN];
 } mit_message_t;
 

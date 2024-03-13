@@ -88,15 +88,17 @@ int swap_components(mit_comp_id_t component_id_in, mit_comp_id_t component_id_ou
     // Find the component to swap out
     for (unsigned i = 0; i < flash_status.component_cnt; i++) {
         if (flash_status.component_ids[i] == component_id_out) {
+            // Grab outgoing session
+            mit_session_t * session = get_session_of_component(component_id_out);
+            if (session == NULL) {
+                print_debug("0x%08x is provisioned, but has no active session\n", component_id_out);
+                return ERROR_RETURN;
+            }
+
             // Swap out component id
             flash_status.component_ids[i] = component_id_in;
 
             // Reset session info
-            mit_session_t * session = get_session_of_component(component_id_in);
-            if (session == NULL) {
-                return ERROR_RETURN;
-            }
-
             memset(session->rawBytes, 0, sizeof(mit_session_t));
             session->component_id = component_id_in;
             get_rand_bytes(session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));

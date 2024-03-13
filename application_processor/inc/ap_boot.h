@@ -9,15 +9,9 @@
 #include "ap_common.h"
 
 // Boot the components and board if the components validate
-void attempt_boot(void);
-
-// Validate that all components are present
-int validate_components(void);
-
-// Command components to boot
-int boot_components(void);
+int attempt_boot(void);
 
 // Command AP to boot
-void boot(void);
+void boot_ap(void);
 
 #endif
