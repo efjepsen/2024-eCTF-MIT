@@ -50,7 +50,7 @@ static int make_mit_init_packet(mit_comp_id_t component_id) {
     packet->ad.comp_id = component_id;
     packet->ad.opcode = MIT_CMD_INIT;
     packet->ad.len = sizeof(mit_message_init_t);
-    packet->ad.for_ap == false;
+    packet->ad.for_ap = false;
     memcpy(packet->ad.nonce.rawBytes, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
 
     // Encrypt init_msg into packet, generate authTag
