@@ -54,7 +54,7 @@ int attest_component(uint32_t component_id) {
 
     // Step 4: Validate r1 is present in response
     mit_message_t * response = (mit_message_t *)ap_plaintext;
-    if (memcmp(response->attestReq.r1.rawBytes, attestReq.r1.rawBytes, sizeof(mit_challenge_t)) != 0) {
+    if (mit_ConstantCompare_challenge(response->attestReq.r1.rawBytes, attestReq.r1.rawBytes) != 0) {
         return ERROR_RETURN;
     }
 
@@ -97,7 +97,7 @@ static int compare_pin(char * pin) {
     uint8_t * hashed_pin = getHashedPinPtr();
 
     // Compare with precomputed salt+actual_pin
-    return mit_ConstantCompare(guessed_hash, hashed_pin, MIT_HASH_SIZE);
+    return mit_ConstantCompare_hash(guessed_hash, hashed_pin);
 }
 
 // Compare the entered PIN to the correct PIN

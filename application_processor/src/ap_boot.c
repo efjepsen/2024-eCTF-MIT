@@ -50,7 +50,7 @@ int attempt_boot() {
         }
 
         // Step 4: Validate r1 is present in response
-        if (memcmp(response->bootReq.r1.rawBytes, bootReq.r1.rawBytes, sizeof(mit_challenge_t)) != 0) {
+        if (mit_ConstantCompare_challenge(response->bootReq.r1.rawBytes, bootReq.r1.rawBytes) != 0) {
             boot_err;
             return ERROR_RETURN;
         }
@@ -61,7 +61,7 @@ int attempt_boot() {
 
     // Confirm that we saved boot challenges for all provisioned components
     for (int id = 0; id < COMPONENT_CNT; id++) {
-        if (memcmp(boot_challenges[id].rawBytes, null_challenge.rawBytes, sizeof(mit_challenge_t)) == 0) {
+        if (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) {
             boot_err;
             return ERROR_RETURN;
         }
@@ -69,7 +69,7 @@ int attempt_boot() {
 
     // Confirm that we saved boot challenges for all provisioned components... again.
     for (int id = 0; id < COMPONENT_CNT; id++) {
-        if (memcmp(boot_challenges[id].rawBytes, null_challenge.rawBytes, sizeof(mit_challenge_t)) == 0) {
+        if (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) {
             boot_err;
             return ERROR_RETURN;
         }
@@ -109,7 +109,7 @@ int attempt_boot() {
 
     // Confirm that we saved boot challenges for all provisioned components... again... again.
     for (int id = 0; id < COMPONENT_CNT; id++) {
-        if (memcmp(boot_challenges[id].rawBytes, null_challenge.rawBytes, sizeof(mit_challenge_t)) == 0) {
+        if (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) {
             boot_err;
             return ERROR_RETURN;
         }

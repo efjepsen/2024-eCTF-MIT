@@ -97,7 +97,7 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
     }
 
     // Validate incoming nonce matches expected nonce
-    if (memcmp(session->incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
+    if (mit_ConstantCompare_nonce(session->incoming_nonce.rawBytes, packet->ad.nonce.rawBytes) == 0) {
         ret = mit_decrypt(packet, ap_plaintext);
 
         if (ret != SUCCESS_RETURN) {

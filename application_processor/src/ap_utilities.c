@@ -175,7 +175,7 @@ int issue_cmd(mit_comp_id_t component_id) {
     }
 
     // Validate incoming nonce matches expected nonce
-    if (memcmp(session->incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
+    if (mit_ConstantCompare_nonce(session->incoming_nonce.rawBytes, packet->ad.nonce.rawBytes) == 0) {
         ret = mit_decrypt(packet, ap_plaintext);
 
         if (ret != SUCCESS_RETURN) {
@@ -283,14 +283,14 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
     }
 
     // if the nonce is 0, generate a random nonce
-    while (memcmp(null_nonce, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
+    while (mit_ConstantCompare_nonce(session->outgoing_nonce.rawBytes, null_nonce) == 0) {
         get_rand_bytes(session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
     }
 
     memcpy(packet->ad.nonce.rawBytes, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
 
     // TODO do we really need this :)
-    if (memcmp(packet->ad.nonce.rawBytes, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t))) {
+    if (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, session->outgoing_nonce.rawBytes) != 0) {
         print_error("Failed to copy nonce!\n");
         return ERROR_RETURN;
     }

@@ -82,13 +82,13 @@ void session_init(void) {
     memset(session.rawBytes, 0, sizeof(mit_session_t));
 
     // Initialize outgoing nonce to some random value
-    while (memcmp(session.outgoing_nonce.rawBytes, null_nonce, MIT_NONCE_SIZE) == 0) {
+    while (mit_ConstantCompare_nonce(session.outgoing_nonce.rawBytes, null_nonce) == 0) {
         get_rand_bytes(session.outgoing_nonce.rawBytes, MIT_NONCE_SIZE);
     }
 }
 
 bool valid_session(void) {
-    return (memcmp(session.incoming_nonce.rawBytes, null_nonce, sizeof(mit_nonce_t)) != 0);
+    return mit_ConstantCompare_nonce(session.incoming_nonce.rawBytes, null_nonce) != 0;
 }
 
 int validate_packet(mit_opcode_t opcode) {
@@ -116,7 +116,7 @@ int validate_packet(mit_opcode_t opcode) {
     }
 
     // Check received nonce matches expected nonce
-    if (memcmp(packet->ad.nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t)) != 0) {
+    if (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, session.incoming_nonce.rawBytes) != 0) {
         printf("nonce mismatch\n");
         printf("packet->ad.nonce.rawBytes: 0x%08x\n", packet->ad.nonce.sequenceNumber);
         printf("session.incoming_nonce.rawBytes: 0x%08x\n", session.incoming_nonce.sequenceNumber);
@@ -160,14 +160,14 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
     // WARNING reusing a nonce is the worst thing you can possibly do.
 
     // if the nonce is 0, generate a random nonce
-    while (memcmp(null_nonce, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
+    while (mit_ConstantCompare_nonce(session.outgoing_nonce.rawBytes, null_nonce) == 0) {
         get_rand_bytes(session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
     }
 
     memcpy(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
 
     // TODO do we really need this :)
-    if (memcmp(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t))) {
+    if (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes) != 0) {
         printf("error: Failed to copy nonce!\n");
         return ERROR_RETURN;
     }
@@ -244,7 +244,7 @@ int secure_receive(uint8_t* buffer) {
     }
 
     // Validate incoming nonce matches expected nonce
-    if (memcmp(session.incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
+    if (mit_ConstantCompare_nonce(session.incoming_nonce.rawBytes, packet->ad.nonce.rawBytes) == 0) {
         ret = mit_decrypt(packet, comp_plaintext);
 
         if (ret != SUCCESS_RETURN) {
@@ -331,7 +331,7 @@ int component_process_cmd() {
     }
 
     // Validate incoming nonce matches expected nonce
-    if (memcmp(session.incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
+    if (mit_ConstantCompare_nonce(session.incoming_nonce.rawBytes, packet->ad.nonce.rawBytes) == 0) {
         ret = mit_decrypt(packet, comp_plaintext);
 
         if (ret != SUCCESS_RETURN) {
@@ -414,7 +414,7 @@ int process_boot() {
     }
 
     // Step 6: Validate r2 in attest response
-    if (memcmp(message->boot.r2.rawBytes, r2.rawBytes, sizeof(mit_challenge_t)) != 0) {
+    if (mit_ConstantCompare_challenge(message->boot.r2.rawBytes, r2.rawBytes) != 0) {
         return ERROR_RETURN;
     }
 
@@ -489,7 +489,7 @@ int process_attest() {
 
     // Step 6: Validate r2 in attest response
     mit_message_attest_t * attest = (mit_message_attest_t *)comp_plaintext;
-    if (memcmp(attest->r2.rawBytes, r2.rawBytes, sizeof(mit_challenge_t)) != 0) {
+    if (mit_ConstantCompare_challenge(attest->r2.rawBytes, r2.rawBytes) != 0) {
         return ERROR_RETURN;
     }
 
@@ -550,7 +550,7 @@ int process_init_session() {
     }
 
     mit_message_init_t * received = (mit_message_init_t *)comp_plaintext;
-    if (memcmp(packet->ad.nonce.rawBytes, received->ap_nonce.rawBytes, sizeof(mit_nonce_t)) != 0) {
+    if (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, received->ap_nonce.rawBytes) != 0) {
         // If packet's nonce, and the message's ap_nonce don't match, ignore.
         return ERROR_RETURN;
     }

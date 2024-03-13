@@ -18,7 +18,7 @@ void session_init(void) {
         sessions[i].component_id = get_component_id(i);
 
         // Initialize outgoing nonces to some random value
-        while (memcmp(sessions[i].outgoing_nonce.rawBytes, null_nonce, sizeof(mit_nonce_t)) == 0) {
+        while (mit_ConstantCompare_nonce(sessions[i].outgoing_nonce.rawBytes, null_nonce) == 0) {
             get_rand_bytes(sessions[i].outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
         }
     }
@@ -42,7 +42,7 @@ static int make_mit_init_packet(mit_comp_id_t component_id) {
     // Copy outgoing nonce into first field
     memcpy(init_msg.ap_nonce.rawBytes, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
 
-    if (memcmp(session->outgoing_nonce.rawBytes, init_msg.ap_nonce.rawBytes, sizeof(mit_nonce_t)) != 0) {
+    if (mit_ConstantCompare_nonce(session->outgoing_nonce.rawBytes, init_msg.ap_nonce.rawBytes) != 0) {
         return ERROR_RETURN;
     }
 
@@ -129,7 +129,7 @@ int validate_session(mit_comp_id_t component_id) {
     }
 
     // If incoming_nonce is set, we have established a session already
-    if (memcmp(session->incoming_nonce.rawBytes, null_nonce, sizeof(mit_nonce_t)) != 0) {
+    if (mit_ConstantCompare_nonce(session->incoming_nonce.rawBytes, null_nonce) != 0) {
         return SUCCESS_RETURN;
     }
 
@@ -156,17 +156,17 @@ int validate_session(mit_comp_id_t component_id) {
     mit_message_init_t * received = (mit_message_init_t *)ap_plaintext;
 
     // Validate nonce in message corresponds to nonce in authData
-    if (memcmp(packet->ad.nonce.rawBytes, received->component_nonce.rawBytes, sizeof(mit_nonce_t)) != 0) {
+    if (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, received->component_nonce.rawBytes) != 0) {
         return ERROR_RETURN;
     }
 
     // Validate ap_nonce in message corresponds to ap_nonce we sent
-    if (memcmp(received->ap_nonce.rawBytes, expected_nonce.rawBytes, sizeof(mit_nonce_t)) != 0) {
+    if (mit_ConstantCompare_nonce(received->ap_nonce.rawBytes, expected_nonce.rawBytes) != 0) {
         return ERROR_RETURN;
     }
 
     // Validate received nonce isn't 0 :-)
-    if (memcmp(received->component_nonce.rawBytes, null_nonce, sizeof(mit_nonce_t)) == 0) {
+    if (mit_ConstantCompare_nonce(received->component_nonce.rawBytes, null_nonce) == 0) {
         return ERROR_RETURN;
     }
 

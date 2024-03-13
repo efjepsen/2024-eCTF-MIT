@@ -53,7 +53,7 @@ int compare_token(char * token) {
     uint8_t * hashed_token = getHashedTokenPtr();
 
     // Compare with precomputed salt+actual_token
-    return mit_ConstantCompare(guessed_hash, hashed_token, MIT_HASH_SIZE);
+    return mit_ConstantCompare_hash(guessed_hash, hashed_token);
 }
 
 // Function to validate the replacement token

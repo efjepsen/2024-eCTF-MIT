@@ -18,6 +18,10 @@ typedef struct __attribute__((packed)) {
     uint8_t rawBytes[MIT_HASH_SIZE];
 } mit_hash_t;
 
+#define mit_ConstantCompare_nonce(a, b) mit_ConstantCompare(a, b, sizeof(mit_nonce_t))
+#define mit_ConstantCompare_hash(a,b) mit_ConstantCompare(a, b, sizeof(mit_hash_t))
+#define mit_ConstantCompare_challenge(a,b) mit_ConstantCompare(a, b, sizeof(mit_challenge_t))
+
 int mit_ConstantCompare(const uint8_t* a, const uint8_t* b, int length);
 
 void get_random_challenge(mit_challenge_t * challenge);
