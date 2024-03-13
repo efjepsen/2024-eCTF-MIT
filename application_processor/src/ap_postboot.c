@@ -134,8 +134,8 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
  * This function must be implemented by your team.
 */
 int get_provisioned_ids(uint32_t* buffer) {
-    for (int id = 0; id < get_num_components(); id++) {
+    for (int id = 0; id < COMPONENT_CNT; id++) {
         buffer[id] = get_component_id(id);
     }
-    return get_num_components();
+    return COMPONENT_CNT;
 }

@@ -15,7 +15,7 @@ int scan_components() {
     // fact that it is only 4 bytes, and thus shorter than any mit_packet_t.
 
     // Print out provisioned component IDs
-    for (unsigned id = 0; id < get_num_components(); id++) {
+    for (unsigned id = 0; id < COMPONENT_CNT; id++) {
         print_info("P>0x%08x\n", get_component_id(id));
     }
 

@@ -13,7 +13,7 @@ mit_session_t sessions[32];
 void session_init(void) {
     // Copy stored component_ids into sessions.
     // Initialize nonce's to {0}.
-    for (int i = 0; i < get_num_components(); i++) {
+    for (int i = 0; i < COMPONENT_CNT; i++) {
         memset(sessions[i].rawBytes, 0, sizeof(mit_session_t));
         sessions[i].component_id = get_component_id(i);
 
@@ -181,7 +181,7 @@ int validate_session(mit_comp_id_t component_id) {
 
 // Get ptr to session of given component_id
 mit_session_t * get_session_of_component(mit_comp_id_t component_id) {
-    for (int i = 0; i < get_num_components(); i++) {
+    for (int i = 0; i < COMPONENT_CNT; i++) {
         if (sessions[i].component_id == component_id) {
             return &sessions[i];
         }

@@ -43,11 +43,6 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
 // TODO gross data allocation?
 uint8_t ap_plaintext[AP_PLAINTEXT_LEN];
 
-// Return number of provisioned components
-int get_num_components(void) {
-    return flash_status.component_cnt;
-}
-
 // Return component_id stored in slot `id`
 mit_comp_id_t get_component_id(int id) {
     if (id < flash_status.component_cnt) {

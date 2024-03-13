@@ -13,9 +13,6 @@ void session_init(void);
 
 mit_session_t * get_session_of_component(mit_comp_id_t component_id);
 
-// Return number of provisioned components
-int get_num_components(void);
-
 // Return component_id stored in slot `id`
 mit_comp_id_t get_component_id(int id);
 

@@ -97,7 +97,7 @@ int main() {
             printf("sizeof(mit_nonce_t):   %d\n", sizeof(mit_nonce_t));
             printf("sizeof(mit_comp_id_t): %d\n", sizeof(mit_comp_id_t));
             printf("--- sessions info ---\n");
-            for (int i = 0; i < get_num_components(); i++) {
+            for (int i = 0; i < COMPONENT_CNT; i++) {
                 mit_comp_id_t component_id = get_component_id(i);
                 mit_session_t * session = get_session_of_component(component_id);
                 printf("component_id: 0x%08x\n", component_id);
