@@ -22,27 +22,57 @@ void attempt_attest() {
 
 // Send attestation request to specific component
 int attest_component(uint32_t component_id) {
-    // TODO check validity of component id
+    int ret, len;
+    mit_challenge_t r1;
+    // Step 0: validate component
+    // TODO already done in messaging tbh
 
-    // Create command message
-    uint8_t dummy = 0x55;
-    int ret = make_mit_packet(component_id, MIT_CMD_ATTEST, &dummy, 1);
+    // Step 1: generate random challenge r1
+    get_random_challenge(&r1);
+
+    // Step 2: construct AttestReq message
+    mit_message_attestreq_t attestReq = {0};
+    memcpy(attestReq.r1.rawBytes, r1.rawBytes, sizeof(mit_challenge_t));
+
+    ret = make_mit_packet(component_id, MIT_CMD_ATTESTREQ, attestReq.rawBytes, sizeof(mit_message_attestreq_t));
     if (ret != SUCCESS_RETURN) {
         return ret;
     }
 
-    // Send out command and receive result
-    int len = issue_cmd(component_id);
+    // Step 3: send message
+    // TODO validate opcode inside issue_cmd
+    len = issue_cmd(component_id);
     if (len == ERROR_RETURN) {
-        print_error("Could not attest component\n");
         return ERROR_RETURN;
     }
 
-    mit_packet_t * packet = get_rx_packet();
+    // Step 4: Validate r1 is present in response
+    mit_message_t * response = (mit_message_t *)ap_plaintext;
+    if (memcmp(response->attestReq.r1.rawBytes, attestReq.r1.rawBytes, sizeof(mit_challenge_t)) != 0) {
+        return ERROR_RETURN;
+    }
 
-    // Print out attestation data 
-    print_info("C>0x%08x\n", packet->ad.comp_id);
-    print_info("%s", ap_plaintext);
+    // Step 5: Return r2
+    mit_message_attest_t attest = {0};
+    memcpy(attest.r2.rawBytes, response->attestReq.r2.rawBytes, sizeof(mit_challenge_t));
+
+    ret = make_mit_packet(component_id, MIT_CMD_ATTEST, attest.rawBytes, sizeof(mit_message_attest_t));
+    if (ret != SUCCESS_RETURN) {
+        return ret;
+    }
+
+    // Step 6: send message
+    // TODO validate opcode inside issue_cmd
+    len = issue_cmd(component_id);
+    if (len == ERROR_RETURN) {
+        return ERROR_RETURN;
+    }
+
+    // Step 7: Print attestation data
+    // TODO ensure response is a string :)
+    response->rawBytes[sizeof(mit_message_t) - 1] = 0;
+    print_info("C>0x%08x\n", component_id);
+    print_info("%s", response->attest.customerData);
     return SUCCESS_RETURN;
 }
 

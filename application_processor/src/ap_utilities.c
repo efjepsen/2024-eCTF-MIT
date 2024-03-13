@@ -199,6 +199,20 @@ int issue_cmd(mit_comp_id_t component_id) {
 
 /******************************* MIT UTILITIES ********************************/
 
+// static void print_packet(mit_packet_t * packet) {
+//     printf("packet @ 0x%08x\n", (uint32_t)packet);
+//     printf("    nonce: ");
+//     print_hex(packet->ad.nonce.rawBytes, sizeof(mit_nonce_t));
+//     printf("  comp_id: %08x\n", packet->ad.comp_id);
+//     printf("   opcode: %02x\n", packet->ad.opcode);
+//     printf("      len: %02x\n", packet->ad.len);
+//     printf("   for_ap: %02x\n", packet->ad.for_ap);
+//     printf("  authTag: ");
+//     print_hex(packet->authTag.rawBytes, sizeof(mit_authtag_t));
+//     printf("   cipher: ");
+//     print_hex(packet->message.rawBytes, sizeof(mit_message_t));
+// }
+
 // TODO remove
 // Send packet at *packet to addr
 int send_mit_packet(i2c_addr_t addr, mit_packet_t * packet) {
@@ -289,7 +303,7 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
     }
 
     // TODO best place to increase nonce?
-    session->outgoing_nonce.sequenceNumber += 1;
+    increment_nonce(&session->outgoing_nonce);
 
     return SUCCESS_RETURN;
 }

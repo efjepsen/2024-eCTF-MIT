@@ -93,6 +93,44 @@ bool valid_session(void) {
     return (memcmp(session.incoming_nonce.rawBytes, null_nonce, sizeof(mit_nonce_t)) != 0);
 }
 
+int validate_packet(mit_opcode_t opcode) {
+    mit_packet_t * packet = (mit_packet_t *) receive_buffer;
+
+    if (packet->ad.comp_id != COMPONENT_ID) {
+        printf("component_id mismatch\n");
+        return ERROR_RETURN;
+    }
+
+    if (packet->ad.for_ap != false) {
+        printf("for_ap is true\n");
+        return ERROR_RETURN;
+    }
+
+    // TODO use length-lookup struct
+    if (packet->ad.len == 0) {
+        printf("len not 0\n");
+        return ERROR_RETURN;
+    }
+
+    if (packet->ad.opcode != opcode) {
+        printf("opcode mismatch\n");
+        return ERROR_RETURN;
+    }
+
+    // Check received nonce matches expected nonce
+    if (memcmp(packet->ad.nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t)) != 0) {
+        printf("nonce mismatch\n");
+        printf("packet->ad.nonce.rawBytes: 0x%08x\n", packet->ad.nonce.sequenceNumber);
+        printf("session.incoming_nonce.rawBytes: 0x%08x\n", session.incoming_nonce.sequenceNumber);
+        return ERROR_RETURN;
+    }
+
+    // TODO best place for this?
+    increment_nonce(&session.incoming_nonce);
+
+    return SUCCESS_RETURN;
+}
+
 void set_ad(mit_packet_t * packet, mit_comp_id_t comp_id, mit_opcode_t opcode, uint8_t len) {
     // TODO limits check on len?
     packet->ad.nonce.sequenceNumber = 0; // TODO
@@ -260,7 +298,7 @@ int component_process_cmd() {
     }
 
     // TODO best place for this?
-    increment_nonce(&session.incoming_nonce);
+    // increment_nonce(&session.incoming_nonce);
 
     // Output to application processor dependent on command received
     switch (packet->ad.opcode) {
@@ -268,7 +306,7 @@ int component_process_cmd() {
         return process_boot();
     case MIT_CMD_VALIDATE:
         return process_validate();
-    case MIT_CMD_ATTEST:
+    case MIT_CMD_ATTESTREQ:
         return process_attest();
     default:
         printf("Error: Unrecognized command received %d\n", packet->ad.opcode);
@@ -277,15 +315,21 @@ int component_process_cmd() {
 }
 
 int process_boot() {
+    int ret;
     // The AP requested a boot. Set `component_boot` for the main loop and
     // respond with the boot message
+    ret = validate_packet(MIT_CMD_BOOT);
+    if (ret != SUCCESS_RETURN) {
+        printf("validation failed\n");
+        return ERROR_RETURN;
+    }
 
     // Copy boot message into message & create packet
 
     // TODO gross data allocation ?
     // TODO +1 needed ?
     uint8_t len = sprintf((char *)working_buffer, "%s", COMPONENT_BOOT_MSG) + 1;
-    int ret = make_mit_packet(COMPONENT_ID, MIT_CMD_BOOT, working_buffer, len);
+    ret = make_mit_packet(COMPONENT_ID, MIT_CMD_BOOT, working_buffer, len);
 
     if (ret != SUCCESS_RETURN) {
         return ret;
@@ -300,11 +344,17 @@ int process_boot() {
 }
 
 int process_validate() {
+    int ret;
     // The AP requested a validation. Respond with the Component ID
+    ret = validate_packet(MIT_CMD_VALIDATE);
+    if (ret != SUCCESS_RETURN) {
+        printf("validation failed\n");
+        return ERROR_RETURN;
+    }
 
     // TODO gross data allocation ?
     mit_comp_id_t component_id = COMPONENT_ID;
-    int ret = make_mit_packet(COMPONENT_ID, MIT_CMD_VALIDATE, &component_id, sizeof(mit_comp_id_t));
+    ret = make_mit_packet(COMPONENT_ID, MIT_CMD_VALIDATE, &component_id, sizeof(mit_comp_id_t));
 
     if (ret != SUCCESS_RETURN) {
         return ret;
@@ -315,19 +365,76 @@ int process_validate() {
 }
 
 int process_attest() {
-    // The AP requested attestation. Respond with the attestation data
+    int ret;
+    uint8_t len;
+    mit_challenge_t r1, r2;
 
-    // TODO gross data allocation ?
-    // TODO + 1 needed?
-    uint8_t len = sprintf((char*)working_buffer, "LOC>%s\nDATE>%s\nCUST>%s\n",
-                ATTESTATION_LOC, ATTESTATION_DATE, ATTESTATION_CUSTOMER) + 1;
-    int ret = make_mit_packet(COMPONENT_ID, MIT_CMD_ATTEST, working_buffer, len);
+    mit_packet_t * packet = (mit_packet_t *) receive_buffer;
 
+    // Step 0: validate packet again :-)
+    printf("step 0\n");
+    ret = validate_packet(MIT_CMD_ATTESTREQ);
+    if (ret != SUCCESS_RETURN) {
+        printf("validation failed\n");
+        return ERROR_RETURN;
+    }
+
+    ret = mit_decrypt(packet, comp_plaintext);
+    if (ret != SUCCESS_RETURN) {
+        printf("decryption failed\n");
+        return ERROR_RETURN;
+    }
+
+    // Step 1: Generate random challenge r2
+    get_random_challenge(&r2);
+
+    // Step 2: Store r2 in response packet
+    mit_message_attestreq_t * attestReq = (mit_message_attestreq_t *)comp_plaintext;
+    memcpy(attestReq->r2.rawBytes, r2.rawBytes, sizeof(mit_challenge_t));
+
+    // Step 3: Send response packet
+    ret = make_mit_packet(COMPONENT_ID, MIT_CMD_ATTESTREQ, attestReq->rawBytes, sizeof(mit_message_attestreq_t));
     if (ret != SUCCESS_RETURN) {
         return ret;
     }
 
     send_packet_and_ack((mit_packet_t *)transmit_buffer);
+
+    // Step 4: Wait to receive a packet
+    len = wait_and_receive_packet(receive_buffer);
+    if (len <= sizeof(mit_comp_id_t)) {
+        return ERROR_RETURN;
+    }
+
+    // Step 5: Validate packet
+    ret = validate_packet(MIT_CMD_ATTEST);
+    if (ret != SUCCESS_RETURN) {
+        return ERROR_RETURN;
+    }
+
+    ret = mit_decrypt(packet, comp_plaintext);
+    if (ret != SUCCESS_RETURN) {
+        return ERROR_RETURN;
+    }
+
+    // Step 6: Validate r2 in attest response
+    mit_message_attest_t * attest = (mit_message_attest_t *)comp_plaintext;
+    if (memcmp(attest->r2.rawBytes, r2.rawBytes, sizeof(mit_challenge_t)) != 0) {
+        return ERROR_RETURN;
+    }
+
+    // Step 7: Stuff with attestation data
+    memset(attest->rawBytes, 0, sizeof(mit_message_attest_t));
+    len = sprintf(attest->customerData, "LOC>%s\nDATE>%s\nCUST>%s\n",
+                ATTESTATION_LOC, ATTESTATION_DATE, ATTESTATION_CUSTOMER) + 1;
+
+    ret = make_mit_packet(COMPONENT_ID, MIT_CMD_ATTEST, attest->rawBytes, sizeof(mit_message_attest_t));
+    if (ret != SUCCESS_RETURN) {
+        return ret;
+    }
+
+    send_packet_and_ack((mit_packet_t *)transmit_buffer);
+
     return SUCCESS_RETURN;
 }
 

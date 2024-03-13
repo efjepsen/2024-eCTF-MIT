@@ -15,7 +15,9 @@
 #define MIT_NONCE_SIZE CHACHA20_POLY1305_AEAD_IV_SIZE
 #define MIT_AUTHTAG_SIZE CHACHA20_POLY1305_AEAD_AUTHTAG_SIZE
 
-#define MIT_MAX_PACKET_LEN 256
+#define MIT_CHALLENGE_SIZE 16
+
+#define MIT_MAX_PACKET_LEN 255
 #define MIT_MAX_MSG_LEN (MIT_MAX_PACKET_LEN - sizeof(mit_ad_t) - sizeof(mit_authtag_t))
 
 /********** GLOBALS **********/
@@ -28,6 +30,7 @@ typedef enum {
     MIT_CMD_VALIDATE,
     MIT_CMD_BOOT,
     MIT_CMD_ATTEST,
+    MIT_CMD_ATTESTREQ,
 } mit_opcode_t;
 
 typedef uint32_t mit_comp_id_t;
@@ -66,10 +69,33 @@ typedef union __attribute__((packed)) {
     uint8_t rawBytes[2*sizeof(mit_nonce_t)];
 } mit_message_init_t;
 
+// Challenge data type
+typedef struct __attribute__((packed)) {
+    uint8_t rawBytes[MIT_CHALLENGE_SIZE];
+} mit_challenge_t;
+
+// MIT_CMD_ATTESTREQ packet data
+typedef union __attribute__((packed)) {
+    struct __attribute__((packed)){
+        mit_challenge_t r1;
+        mit_challenge_t r2;
+    };
+    uint8_t rawBytes[2*sizeof(mit_challenge_t)];
+} mit_message_attestreq_t;
+
+// MIT_CMD_ATTEST packet data
+typedef union __attribute__((packed)) {
+    mit_challenge_t r2;
+    char customerData[MIT_MAX_MSG_LEN];
+    uint8_t rawBytes[MIT_MAX_MSG_LEN];
+} mit_message_attest_t;
+
 // Message section of packet
 typedef union __attribute__((packed)) {
     uint32_t component_id;
     mit_message_init_t init;
+    mit_message_attest_t attest;
+    mit_message_attestreq_t attestReq;
     uint8_t rawBytes[MIT_MAX_MSG_LEN];
 } mit_message_t;
 

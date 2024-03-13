@@ -5,6 +5,10 @@
 
 #include "common_crypto.h"
 
+void get_random_challenge(mit_challenge_t * challenge) {
+    get_rand_bytes(challenge->rawBytes, MIT_CHALLENGE_SIZE);
+}
+
 int mit_sha256(const uint8_t * input, uint8_t len, mit_hash_t * hash) {
     int ret = wc_Sha256Hash(input, len, hash);
     if (ret != 0) {
