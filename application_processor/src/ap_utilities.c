@@ -111,7 +111,7 @@ int swap_components(mit_comp_id_t component_id_in, mit_comp_id_t component_id_ou
 }
 
 // Send a command to a component and receive the result
-int issue_cmd(mit_comp_id_t component_id) {
+int issue_cmd(mit_comp_id_t component_id, mit_opcode_t expected_opcode) {
     int ret;
 
     i2c_addr_t addr = component_id_to_i2c_addr((uint32_t)component_id);
@@ -157,12 +157,16 @@ int issue_cmd(mit_comp_id_t component_id) {
         return ERROR_RETURN;
     }
 
+    // TODO use message len lookup table?
     if (packet->ad.len == 0) {
         print_error("rx packet has null message length\n");
         return ERROR_RETURN;
     }
 
-    // TODO validate opcode!
+    if (packet->ad.opcode != expected_opcode) {
+        print_error("rx packet has wrong opcode, expected 0x%02x, got 0x%02x\n", expected_opcode, packet->ad.opcode);
+        return ERROR_RETURN;
+    }
 
     mit_session_t * session = get_session_of_component(component_id);
     if (session == NULL) {

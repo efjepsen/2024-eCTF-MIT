@@ -47,7 +47,7 @@ int attest_component(uint32_t component_id) {
 
     // Step 3: send message
     // TODO validate opcode inside issue_cmd
-    len = issue_cmd(component_id);
+    len = issue_cmd(component_id, MIT_CMD_ATTESTREQ);
     if (len == ERROR_RETURN) {
         return ERROR_RETURN;
     }
@@ -69,7 +69,7 @@ int attest_component(uint32_t component_id) {
 
     // Step 6: send message
     // TODO validate opcode inside issue_cmd
-    len = issue_cmd(component_id);
+    len = issue_cmd(component_id, MIT_CMD_ATTEST);
     if (len == ERROR_RETURN) {
         return ERROR_RETURN;
     }

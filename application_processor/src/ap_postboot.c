@@ -85,7 +85,6 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
         return ERROR_RETURN;
     }
 
-    // TODO validate opcode!
     if (packet->ad.opcode != MIT_CMD_POSTBOOT) {
         print_error("secure_send: bad opcode 0x%02x\n", packet->ad.comp_id);
         return ERROR_RETURN;

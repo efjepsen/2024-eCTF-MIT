@@ -23,7 +23,7 @@ void flash_first_boot(void);
 int swap_components(mit_comp_id_t component_id_in, mit_comp_id_t component_id_out);
 
 // Send a command to a component and receive the result
-int issue_cmd(mit_comp_id_t component_id);
+int issue_cmd(mit_comp_id_t component_id, mit_opcode_t expected_opcode);
 
 // TODO remove *packet arg
 // Send packet at *packet to addr

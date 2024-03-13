@@ -237,7 +237,6 @@ int secure_receive(uint8_t* buffer) {
         return ERROR_RETURN;
     }
 
-    // TODO validate opcode!
     if (packet->ad.opcode != MIT_CMD_POSTBOOT) {
         printf("err: secure_send: bad opcode 0x%02x\n", packet->ad.comp_id);
         return ERROR_RETURN;
