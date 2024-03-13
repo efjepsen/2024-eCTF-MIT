@@ -14,7 +14,7 @@ void session_init(void);
 mit_session_t * get_session_of_component(mit_comp_id_t component_id);
 
 // Return component_id stored in slot `id`
-mit_comp_id_t get_component_id(int id);
+mit_comp_id_t get_component_id(uint8_t id);
 
 // Test application has been booted before
 void flash_first_boot(void);

@@ -44,8 +44,8 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
 uint8_t ap_plaintext[AP_PLAINTEXT_LEN];
 
 // Return component_id stored in slot `id`
-mit_comp_id_t get_component_id(int id) {
-    if (id < flash_status.component_cnt) {
+mit_comp_id_t get_component_id(uint8_t id) {
+    if (id < COMPONENT_CNT) {
         return flash_status.component_ids[id];
     }
 
@@ -74,14 +74,14 @@ void flash_first_boot(void) {
 // Swap component IN with component OUT
 int swap_components(mit_comp_id_t component_id_in, mit_comp_id_t component_id_out) {
     // Ensure that component_id_in is not already provisioned
-    for (unsigned i = 0; i < flash_status.component_cnt; i++) {
+    for (unsigned i = 0; i < COMPONENT_CNT; i++) {
         if (flash_status.component_ids[i] == component_id_in) {
             return ERROR_RETURN;
         }
     }
 
     // Find the component to swap out
-    for (unsigned i = 0; i < flash_status.component_cnt; i++) {
+    for (unsigned i = 0; i < COMPONENT_CNT; i++) {
         if (flash_status.component_ids[i] == component_id_out) {
             // Grab outgoing session
             mit_session_t * session = get_session_of_component(component_id_out);
@@ -238,7 +238,7 @@ void set_ad(mit_packet_t * packet, mit_comp_id_t comp_id, mit_opcode_t opcode, u
  * Returns true if component found in status structs, else false
  */
 bool is_valid_component(mit_comp_id_t component_id) {
-    for (int i = 0; i < flash_status.component_cnt; i++) {
+    for (int i = 0; i < COMPONENT_CNT; i++) {
         if (flash_status.component_ids[i] == component_id) {
             return true;
         }
