@@ -31,6 +31,7 @@ typedef enum {
     MIT_CMD_ATTESTREQ,
     MIT_CMD_BOOT,
     MIT_CMD_BOOTREQ,
+    MIT_CMD_POSTBOOT,
 } mit_opcode_t;
 
 typedef uint32_t mit_comp_id_t;

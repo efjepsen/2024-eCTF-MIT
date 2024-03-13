@@ -200,7 +200,7 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
 */
 void secure_send(uint8_t* buffer, uint8_t len) {
     // TODO gross allocation
-    make_mit_packet(COMPONENT_ID, MIT_CMD_NONE, buffer, len);
+    make_mit_packet(COMPONENT_ID, MIT_CMD_POSTBOOT, buffer, len);
     send_packet_and_ack((mit_packet_t *)transmit_buffer);
 }
 
@@ -215,7 +215,58 @@ void secure_send(uint8_t* buffer, uint8_t len) {
  * This function must be implemented by your team to align with the security requirements.
 */
 int secure_receive(uint8_t* buffer) {
-    return wait_and_receive_packet(buffer);
+    int ret;
+    mit_packet_t * packet = (mit_packet_t *) receive_buffer;
+
+    uint8_t len = wait_and_receive_packet(packet);
+
+   /*************** VALIDATE RECEIVED PACKET ****************/
+
+    if (packet->ad.comp_id != COMPONENT_ID) {
+        printf("err: rx packet (0x%08x) doesn't match given component id (0x%08x)\n", packet->ad.comp_id, COMPONENT_ID);
+        return ERROR_RETURN;
+    }
+
+    if (packet->ad.for_ap != false) {
+        printf("err: rx packet not tagged for component\n");
+        return ERROR_RETURN;
+    }
+
+    if (packet->ad.len == 0) {
+        printf("err: rx packet has null message length\n");
+        return ERROR_RETURN;
+    }
+
+    // TODO validate opcode!
+    if (packet->ad.opcode != MIT_CMD_POSTBOOT) {
+        printf("err: secure_send: bad opcode 0x%02x\n", packet->ad.comp_id);
+        return ERROR_RETURN;
+    }
+
+    // Validate incoming nonce matches expected nonce
+    if (memcmp(session.incoming_nonce.rawBytes, packet->ad.nonce.rawBytes, sizeof(mit_nonce_t)) == 0) {
+        ret = mit_decrypt(packet, comp_plaintext);
+
+        if (ret != SUCCESS_RETURN) {
+            printf("err: secure_receive: decryption failed with error %i\n", ret);
+            memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
+            return ERROR_RETURN;
+        }
+    } else {
+        printf("err: Incoming nonce (seq 0x%08x) doesn't match expected nonce (seq 0x%08x)\n",
+            packet->ad.nonce.sequenceNumber, session.incoming_nonce.sequenceNumber
+        );
+        return ERROR_RETURN;
+    }
+
+    // TODO best place for this?
+    // increase incoming nonce
+    increment_nonce(&session.incoming_nonce);
+
+    /********************************************************/
+    memcpy(buffer, comp_plaintext, len);
+
+    return len;
 }
 
 /******************************* FUNCTION DEFINITIONS *********************************/
