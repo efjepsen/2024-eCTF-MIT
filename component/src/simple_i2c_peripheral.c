@@ -110,7 +110,11 @@ void i2c_simple_isr (void) {
         }
         if (ACTIVE_REG <= MAX_REG) {
             int available = MXC_I2C_GetRXFIFOAvailable(I2C_INTERFACE);
-            if (available < (I2C_REGS_LEN[ACTIVE_REG]-WRITE_INDEX)) {
+            if (available <= 0) {
+                // Continue if error or nothing available.
+                ;
+            }
+            else if (available < (I2C_REGS_LEN[ACTIVE_REG]-WRITE_INDEX)) {
                 WRITE_INDEX += MXC_I2C_ReadRXFIFO(I2C_INTERFACE,
                     &I2C_REGS[ACTIVE_REG][WRITE_INDEX],
                     // Possible race condition? don't re-fetch num available bytes
@@ -222,7 +226,11 @@ void i2c_simple_isr (void) {
         // Read remaining data
         if (ACTIVE_REG <= MAX_REG) {
             int available = MXC_I2C_GetRXFIFOAvailable(I2C_INTERFACE);
-            if (available < (I2C_REGS_LEN[ACTIVE_REG]-WRITE_INDEX)) {
+            if (available <= 0) {
+                // Continue if error or nothing available.
+                ;
+            }
+            else if (available < (I2C_REGS_LEN[ACTIVE_REG]-WRITE_INDEX)) {
                 WRITE_INDEX += MXC_I2C_ReadRXFIFO(I2C_INTERFACE,
                     &I2C_REGS[ACTIVE_REG][WRITE_INDEX],
                     // Possible race condition? don't re-fetch num available bytes
