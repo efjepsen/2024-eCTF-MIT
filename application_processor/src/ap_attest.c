@@ -5,6 +5,12 @@
 
 #include "ap_common.h"
 
+// SALT_LEN + PIN_LEN = 40
+#define SALT_LEN MIT_HASH_SIZE
+#define PIN_LEN 6
+static uint8_t guess_buf[SALT_LEN + PIN_LEN] = ATTEST_SALT;
+static uint8_t guessed_hash[MIT_HASH_SIZE] = {0};
+
 // Attest a component if the PIN is correct
 void attempt_attest() {
     char * buf = get_uart_buf();
@@ -76,11 +82,29 @@ int attest_component(uint32_t component_id) {
     return SUCCESS_RETURN;
 }
 
+static int compare_pin(char * pin) {
+    int ret;
+
+    // Copy guess into end of buffer
+    memcpy(&guess_buf[MIT_HASH_SIZE], pin, PIN_LEN);
+
+    // Compute hash over salt + guess
+    ret = mit_sha256(guess_buf, SALT_LEN + PIN_LEN, guessed_hash);
+    if (ret != 0) {
+        return ERROR_RETURN;
+    }
+
+    uint8_t * hashed_pin = getHashedPinPtr();
+
+    // Compare with precomputed salt+actual_pin
+    return mit_ConstantCompare(guessed_hash, hashed_pin, MIT_HASH_SIZE);
+}
+
 // Compare the entered PIN to the correct PIN
 int validate_pin(void) {
     char * buf = get_uart_buf();
-    recv_input("Enter pin: ", 6);
-    if (!strcmp(buf, AP_PIN)) {
+    recv_input("Enter pin: ", PIN_LEN);
+    if (!compare_pin(buf)) {
         print_debug("Pin Accepted!\n");
         return SUCCESS_RETURN;
     }

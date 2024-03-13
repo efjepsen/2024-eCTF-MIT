@@ -36,6 +36,9 @@ extern uint8_t ap_plaintext[AP_PLAINTEXT_LEN];
 #include "ap_session.h"
 #include "ap_utilities.h"
 
+// Prehashed secrets :-)
+#include "prehashed.h"
+
 #include "return_codes.h"
 
 #endif

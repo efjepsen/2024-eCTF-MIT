@@ -18,6 +18,8 @@ typedef struct __attribute__((packed)) {
     uint8_t rawBytes[MIT_HASH_SIZE];
 } mit_hash_t;
 
+int mit_ConstantCompare(const uint8_t* a, const uint8_t* b, int length);
+
 void get_random_challenge(mit_challenge_t * challenge);
 
 int mit_sha256(const uint8_t * input, uint8_t len, mit_hash_t * hash);

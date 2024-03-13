@@ -5,6 +5,19 @@
 
 #include "common_crypto.h"
 
+// Borrowed from wolfSSL library
+// Just couldn't easily compile it in :)
+int mit_ConstantCompare(const uint8_t* a, const uint8_t* b, int length) {
+    int i;
+    int compareSum = 0;
+
+    for (i = 0; i < length; i++) {
+        compareSum |= a[i] ^ b[i];
+    }
+
+    return compareSum;
+}
+
 void get_random_challenge(mit_challenge_t * challenge) {
     get_rand_bytes(challenge->rawBytes, MIT_CHALLENGE_SIZE);
 }

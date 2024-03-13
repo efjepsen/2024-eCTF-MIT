@@ -19,6 +19,9 @@ IPATH+=../common/include
 VPATH+=../wolfssl/wolfcrypt/src
 IPATH+=../wolfssl
 
+IPATH+=../sha256_literal
+PROJ_OBJS += prehashed.o
+
 # Enable ChaCha20Poly1305 in wolfSSL
 PROJ_CFLAGS += -DHAVE_CHACHA
 PROJ_CFLAGS += -DHAVE_POLY1305
