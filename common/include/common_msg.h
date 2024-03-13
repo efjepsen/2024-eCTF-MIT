@@ -47,9 +47,9 @@ typedef union __attribute__((packed)) {
 // Authenticated Data section of packet
 typedef union __attribute__((packed)) {
     struct __attribute__((packed)) {
+        mit_opcode_t opcode;
         mit_nonce_t nonce;
         mit_comp_id_t comp_id;
-        mit_opcode_t opcode;
         uint8_t len;
         bool for_ap;
     };
