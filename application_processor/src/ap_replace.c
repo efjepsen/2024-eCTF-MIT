@@ -23,9 +23,9 @@ void attempt_replace() {
     uint32_t component_id_out = 0;
 
     recv_input("Component ID In: ", 10);  // 0x + 8 chars
-    sscanf(buf, "%x", &component_id_in);
+    component_id_in = (uint32_t)strtoul(buf, buf + 10, 16);
     recv_input("Component ID Out: ", 10); // 0x + 8 chars
-    sscanf(buf, "%x", &component_id_out);
+    component_id_out = (uint32_t)strtoul(buf, buf + 10, 16);
 
     if (swap_components(component_id_in, component_id_out) == ERROR_RETURN) {
         print_error("Cannot replace component 0x%08x with component 0x%08x\n",

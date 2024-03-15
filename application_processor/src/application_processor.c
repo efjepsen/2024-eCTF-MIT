@@ -77,18 +77,18 @@ int main() {
     // Handle commands forever
     char * buf = get_uart_buf();
     while (1) {
-        recv_input("Enter Command: ", 10);
+        recv_input("Enter Command: ", 7);
 
         // Execute requested command
-        if (!strcmp(buf, "list")) {
+        if (!strncmp(buf, "list", 4)) {
             scan_components();
-        } else if (!strcmp(buf, "boot")) {
+        } else if (!strncmp(buf, "boot", 4)) {
             attempt_boot();
-        } else if (!strcmp(buf, "replace")) {
+        } else if (!strncmp(buf, "replace", 7)) {
             attempt_replace();
-        } else if (!strcmp(buf, "attest")) {
+        } else if (!strncmp(buf, "attest", 6)) {
             attempt_attest();
-        } else if (!strcmp(buf, "custom")) {
+        } else if (!strncmp(buf, "custom", 6)) {
             printf("sizeof(mit_opcode_t):  %d\n", sizeof(mit_opcode_t));
             printf("sizeof(mit_ad_t):      %d\n", sizeof(mit_ad_t));
             printf("sizeof(mit_authtag_t): %d\n", sizeof(mit_authtag_t));
@@ -108,7 +108,7 @@ int main() {
                 print_hex(session->incoming_nonce.rawBytes, sizeof(mit_nonce_t));
             }
         } else {
-            print_error("Unrecognized command '%s'\n", buf);
+            print_error("Unrecognized command\n");
         }
     }
 
