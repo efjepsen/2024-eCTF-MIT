@@ -8,6 +8,19 @@
 
 #include "ap_common.h"
 
+// Flash Macros
+#define FLASH_ADDR ((MXC_FLASH_MEM_BASE + MXC_FLASH_MEM_SIZE) - (2 * MXC_FLASH_PAGE_SIZE))
+#define FLASH_MAGIC 0xDEADBEEF
+
+// Datatype for information stored in flash
+typedef struct {
+    uint32_t flash_magic;
+    uint32_t component_cnt;
+    uint32_t component_ids[32];
+} flash_entry;
+
+/********************************* UTILITIES **********************************/
+
 // Reset nonces for our i2c comms sessions
 void session_init(void);
 
@@ -16,11 +29,14 @@ mit_session_t * get_session_of_component(mit_comp_id_t component_id);
 // Return component_id stored in slot `id`
 mit_comp_id_t get_component_id(uint8_t id);
 
+// Return ptr to flash_status
+flash_entry * get_flash_status(void);
+
 // Test application has been booted before
 void flash_first_boot(void);
 
-// Swap component IN with component OUT
-int swap_components(mit_comp_id_t component_id_in, mit_comp_id_t component_id_out);
+// Rewrite our provisioned component info into flash
+void rewrite_flash_entry(void);
 
 // Send a command to a component and receive the result
 int issue_cmd(mit_comp_id_t component_id, mit_opcode_t expected_opcode);

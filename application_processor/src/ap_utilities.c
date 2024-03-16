@@ -5,32 +5,7 @@
 
 #include "ap_common.h"
 
-/********************************* CONSTANTS **********************************/
-
-// Passed in through ectf-params.h
-// Example of format of ectf-params.h shown here
-/*
-#define AP_PIN "123456"
-#define AP_TOKEN "0123456789abcdef"
-#define COMPONENT_IDS 0x11111124, 0x11111125
-#define COMPONENT_CNT 2
-#define AP_BOOT_MSG "Test boot message"
-*/
-
-// Flash Macros
-#define FLASH_ADDR ((MXC_FLASH_MEM_BASE + MXC_FLASH_MEM_SIZE) - (2 * MXC_FLASH_PAGE_SIZE))
-#define FLASH_MAGIC 0xDEADBEEF
-
-/******************************** TYPE DEFINITIONS ********************************/
-
-// Datatype for information stored in flash
-typedef struct {
-    uint32_t flash_magic;
-    uint32_t component_cnt;
-    uint32_t component_ids[32];
-} flash_entry;
-
-/********************************* GLOBAL VARIABLES **********************************/
+/********************************* VARIABLES **********************************/
 // Variable for information stored in flash memory
 flash_entry flash_status;
 
@@ -38,21 +13,18 @@ flash_entry flash_status;
 uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN];
 uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
 
-/********************************* UTILITIES **********************************/
-
 // TODO gross data allocation?
 uint8_t ap_plaintext[AP_PLAINTEXT_LEN];
 
-// Return component_id stored in slot `id`
-mit_comp_id_t get_component_id(uint8_t id) {
-    if (id < COMPONENT_CNT) {
-        return flash_status.component_ids[id];
-    }
+/********************************* UTILITIES **********************************/
 
-    return ERROR_RETURN;
+// Return ptr to flash_status
+flash_entry * get_flash_status(void) {
+    return &flash_status;
 }
 
 // Test application has been booted before
+// TODO random delays
 void flash_first_boot(void) {
     flash_simple_read(FLASH_ADDR, (uint32_t*)&flash_status, sizeof(flash_entry));
 
@@ -71,40 +43,17 @@ void flash_first_boot(void) {
     }
 }
 
-// Swap component IN with component OUT
-int swap_components(mit_comp_id_t component_id_in, mit_comp_id_t component_id_out) {
-    // Ensure that component_id_in is not already provisioned
-    for (unsigned i = 0; i < COMPONENT_CNT; i++) {
-        if (flash_status.component_ids[i] == component_id_in) {
-            return ERROR_RETURN;
-        }
-    }
+// Erase & rewrite flash status to flash memory
+// TODO random delays
+void rewrite_flash_entry(void) {
+    flash_simple_erase_page(FLASH_ADDR);
+    flash_simple_write(FLASH_ADDR, (uint32_t*)&flash_status, sizeof(flash_entry));
+}
 
-    // Find the component to swap out
-    for (unsigned i = 0; i < COMPONENT_CNT; i++) {
-        if (flash_status.component_ids[i] == component_id_out) {
-            // Grab outgoing session
-            mit_session_t * session = get_session_of_component(component_id_out);
-            if (session == NULL) {
-                print_debug("0x%08x is provisioned, but has no active session\n", component_id_out);
-                return ERROR_RETURN;
-            }
-
-            // Swap out component id
-            flash_status.component_ids[i] = component_id_in;
-
-            // Reset session info
-            memset(session->rawBytes, 0, sizeof(mit_session_t));
-            session->component_id = component_id_in;
-            get_rand_bytes(session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
-            memset(session->incoming_nonce.rawBytes, 0, sizeof(mit_nonce_t));
-
-            // write updated component_ids to flash
-            flash_simple_erase_page(FLASH_ADDR);
-            flash_simple_write(FLASH_ADDR, (uint32_t*)&flash_status, sizeof(flash_entry));
-
-            return SUCCESS_RETURN;
-        }
+// Return component_id stored in slot `id`
+mit_comp_id_t get_component_id(uint8_t id) {
+    if (id < COMPONENT_CNT) {
+        return flash_status.component_ids[id];
     }
 
     return ERROR_RETURN;
