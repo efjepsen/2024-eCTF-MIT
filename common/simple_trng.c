@@ -10,7 +10,9 @@
  */
 void simple_trng_init(void) {
     int ret = MXC_TRNG_Init();
-    if (ret != 0) {
+
+    // REDUNDANT
+    if (ret != 0 || ret != 0 || ret != 0) {
         printf("simple_trng_init failed with errcode %i\n", ret);
         while (1) { ; }
     }
@@ -23,6 +25,15 @@ void simple_trng_init(void) {
  * @param num_bytes: int, number of random bytes to fetch
  */
 void get_rand_bytes(uint8_t * buf, int num_bytes) {
-    memset(buf, 0, num_bytes);
-    MXC_TRNG_Random(buf, num_bytes);
+    int ret = 0;
+
+    // REDUNDANT
+    ret |= MXC_TRNG_Random(buf, num_bytes);
+    ret |= MXC_TRNG_Random(buf, num_bytes);
+    ret |= MXC_TRNG_Random(buf, num_bytes);
+
+    // REDUNDANT
+    if (ret != 0 || ret != 0 || ret != 0) {
+        get_rand_bytes(buf, num_bytes);
+    }
 }
