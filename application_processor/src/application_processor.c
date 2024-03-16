@@ -62,6 +62,9 @@ void init() {
 
     // MIT: Initialize our custom features
     common_init();
+    // REDUNDANT
+    session_init();
+    session_init();
     session_init();
     
     // Initialize board link interface
