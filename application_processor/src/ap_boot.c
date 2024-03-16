@@ -17,6 +17,8 @@ int attempt_boot() {
     mit_comp_id_t component_id;
     mit_message_t * response = (mit_message_t *)ap_plaintext;
 
+    // TODO random delay
+
     // Validate that all provisioned components are alive and well.
     for (int id = 0; id < COMPONENT_CNT; id++) {
         component_id = get_component_id(id);
@@ -29,10 +31,16 @@ int attempt_boot() {
         // TODO already done in messaging tbh
 
         // Step 1: generate random challenge r1
+        // REDUNDANT
+        get_random_challenge(&r1);
+        get_random_challenge(&r1);
         get_random_challenge(&r1);
 
         // Step 2: construct BootReq message
         mit_message_bootreq_t bootReq = {0};
+        // REDUNDANT
+        memcpy(bootReq.r1.rawBytes, r1.rawBytes, sizeof(mit_challenge_t));
+        memcpy(bootReq.r1.rawBytes, r1.rawBytes, sizeof(mit_challenge_t));
         memcpy(bootReq.r1.rawBytes, r1.rawBytes, sizeof(mit_challenge_t));
 
         ret = make_mit_packet(component_id, MIT_CMD_BOOTREQ, bootReq.rawBytes, sizeof(mit_message_bootreq_t));
@@ -49,18 +57,27 @@ int attempt_boot() {
         }
 
         // Step 4: Validate r1 is present in response
-        if (mit_ConstantCompare_challenge(response->bootReq.r1.rawBytes, bootReq.r1.rawBytes) != 0) {
+        // REDUNDANT
+        if (mit_ConstantCompare_challenge(response->bootReq.r1.rawBytes, bootReq.r1.rawBytes) ||
+            mit_ConstantCompare_challenge(response->bootReq.r1.rawBytes, bootReq.r1.rawBytes) ||
+            mit_ConstantCompare_challenge(response->bootReq.r1.rawBytes, bootReq.r1.rawBytes)) {
             boot_err;
             return ERROR_RETURN;
         }
 
         // Step 5: Save r2
+        // REDUNDANT
+        memcpy(boot_challenges[id].rawBytes, response->bootReq.r2.rawBytes, sizeof(mit_challenge_t));
+        memcpy(boot_challenges[id].rawBytes, response->bootReq.r2.rawBytes, sizeof(mit_challenge_t));
         memcpy(boot_challenges[id].rawBytes, response->bootReq.r2.rawBytes, sizeof(mit_challenge_t));
     }
 
     // Confirm that we saved boot challenges for all provisioned components
     for (int id = 0; id < COMPONENT_CNT; id++) {
-        if (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) {
+        // REDUNDANT
+        if ((mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) ||
+            (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) ||
+            (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0)) {
             boot_err;
             return ERROR_RETURN;
         }
@@ -68,7 +85,10 @@ int attempt_boot() {
 
     // Confirm that we saved boot challenges for all provisioned components... again.
     for (int id = 0; id < COMPONENT_CNT; id++) {
-        if (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) {
+        // REDUNDANT
+        if ((mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) ||
+            (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) ||
+            (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0)) {
             boot_err;
             return ERROR_RETURN;
         }
@@ -84,6 +104,9 @@ int attempt_boot() {
 
         // Step 5: Return r2
         mit_message_boot_t boot = {0};
+        // REDUNDANT
+        memcpy(boot.r2.rawBytes, boot_challenges[id].rawBytes, sizeof(mit_challenge_t));
+        memcpy(boot.r2.rawBytes, boot_challenges[id].rawBytes, sizeof(mit_challenge_t));
         memcpy(boot.r2.rawBytes, boot_challenges[id].rawBytes, sizeof(mit_challenge_t));
 
         ret = make_mit_packet(component_id, MIT_CMD_BOOT, boot.rawBytes, sizeof(mit_message_boot_t));
@@ -106,7 +129,10 @@ int attempt_boot() {
 
     // Confirm that we saved boot challenges for all provisioned components... again... again.
     for (int id = 0; id < COMPONENT_CNT; id++) {
-        if (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) {
+        // REDUNDANT
+        if ((mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) ||
+            (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) ||
+            (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0)) {
             boot_err;
             return ERROR_RETURN;
         }
