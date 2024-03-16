@@ -11,13 +11,22 @@
 static uint8_t guess_buf[SALT_LEN + TOKEN_LEN] = REPLACE_SALT;
 static uint8_t guessed_hash[MIT_HASH_SIZE] = {0};
 
-// Replace a component if the PIN is correct
-void attempt_replace() {
-    char * buf = get_uart_buf();
+static int compare_token(char * token);
 
-    if (validate_token()) {
-        return;
+// TODO add wrong guess delays.
+
+// Replace a component if the PIN is correct
+int attempt_replace() {
+    char * buf = get_uart_buf();
+    recv_input("Enter token: ", TOKEN_LEN);
+
+    // REDUNDANT
+    if (compare_token(buf) || compare_token(buf) || compare_token(buf)) {
+        print_error("Invalid Token!\n");
+        return ERROR_RETURN;
     }
+
+    print_debug("Token Accepted!\n");
 
     uint32_t component_id_in = 0;
     uint32_t component_id_out = 0;
@@ -30,7 +39,7 @@ void attempt_replace() {
     if (swap_components(component_id_in, component_id_out) == ERROR_RETURN) {
         print_error("Cannot replace component 0x%08x with component 0x%08x\n",
             component_id_out, component_id_in);
-        return;
+        return ERROR_RETURN;
     }
 
     print_debug("Replaced 0x%08x with 0x%08x\n", component_id_out,
@@ -42,7 +51,16 @@ int compare_token(char * token) {
     int ret;
 
     // Copy guess into end of buffer
+    // REDUNDANT
     memcpy(&guess_buf[MIT_HASH_SIZE], token, TOKEN_LEN);
+    memcpy(&guess_buf[MIT_HASH_SIZE], token, TOKEN_LEN);
+    memcpy(&guess_buf[MIT_HASH_SIZE], token, TOKEN_LEN);
+
+    // Fill guessed_hash with garbage
+    // REDUNDANT
+    get_rand_bytes(guessed_hash, MIT_HASH_SIZE);
+    get_rand_bytes(guessed_hash, MIT_HASH_SIZE);
+    get_rand_bytes(guessed_hash, MIT_HASH_SIZE);
 
     // Compute hash over salt + guess
     ret = mit_sha256(guess_buf, SALT_LEN + TOKEN_LEN, guessed_hash);
@@ -53,17 +71,12 @@ int compare_token(char * token) {
     uint8_t * hashed_token = getHashedTokenPtr();
 
     // Compare with precomputed salt+actual_token
-    return mit_ConstantCompare_hash(guessed_hash, hashed_token);
-}
-
-// Function to validate the replacement token
-int validate_token() {
-    char * buf = get_uart_buf();
-    recv_input("Enter token: ", TOKEN_LEN);
-    if (!compare_token(buf)) {
-        print_debug("Token Accepted!\n");
-        return SUCCESS_RETURN;
+    // REDUNDANT
+    if (mit_ConstantCompare_hash(guessed_hash, hashed_token) ||
+        mit_ConstantCompare_hash(guessed_hash, hashed_token) ||
+        mit_ConstantCompare_hash(guessed_hash, hashed_token)) {
+        return ERROR_RETURN;
     }
-    print_error("Invalid Token!\n");
-    return ERROR_RETURN;
+
+    return SUCCESS_RETURN;
 }

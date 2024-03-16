@@ -9,9 +9,6 @@
 #include "ap_common.h"
 
 // Replace a component if the PIN is correct
-void attempt_replace(void);
-
-// Function to validate the replacement token
-int validate_token(void);
+int attempt_replace(void);
 
 #endif
