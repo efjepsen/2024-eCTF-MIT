@@ -123,7 +123,6 @@ int validate_packet(mit_opcode_t opcode) {
         return ERROR_RETURN;
     }
 
-    // TODO best place for this?
     increment_nonce(&session.incoming_nonce);
 
     return SUCCESS_RETURN;
@@ -135,7 +134,7 @@ void set_ad(mit_packet_t * packet, mit_comp_id_t comp_id, mit_opcode_t opcode, u
     packet->ad.comp_id = comp_id;
     packet->ad.opcode = opcode;
     packet->ad.len = len;
-    packet->ad.for_ap = true; // TODO use ifdefs w/ AP_BOOT_MSG to resolve this in common code?
+    packet->ad.for_ap = true;
 }
 
 /**
@@ -182,7 +181,6 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
         return ERROR_RETURN;
     }
 
-    // TODO best place to increase nonce?
     increment_nonce(&session.outgoing_nonce);
 
     return SUCCESS_RETURN;
@@ -199,9 +197,9 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
  * This function must be implemented by your team to align with the security requirements.
 */
 void secure_send(uint8_t* buffer, uint8_t len) {
-    // TODO gross allocation
-    make_mit_packet(COMPONENT_ID, MIT_CMD_POSTBOOT, buffer, len);
-    send_packet_and_ack((mit_packet_t *)transmit_buffer);
+    if (!make_mit_packet(COMPONENT_ID, MIT_CMD_POSTBOOT, buffer, len)) {
+        send_packet_and_ack((mit_packet_t *)transmit_buffer);
+    }
 }
 
 /**
@@ -258,8 +256,6 @@ int secure_receive(uint8_t* buffer) {
         return ERROR_RETURN;
     }
 
-    // TODO best place for this?
-    // increase incoming nonce
     increment_nonce(&session.incoming_nonce);
 
     /********************************************************/
@@ -318,7 +314,6 @@ int component_process_cmd() {
         return ERROR_RETURN;
     }
 
-    // TODO use ifdefs for this section
     if (packet->ad.for_ap != false) {
         printf("error: rx packet not tagged for component\n");
         return ERROR_RETURN;
@@ -344,9 +339,6 @@ int component_process_cmd() {
         );
         return ERROR_RETURN;
     }
-
-    // TODO best place for this?
-    // increment_nonce(&session.incoming_nonce);
 
     // Output to application processor dependent on command received
     switch (packet->ad.opcode) {
@@ -573,7 +565,6 @@ int process_init_session() {
         return ERROR_RETURN;
     }
 
-    // TODO best place for this?
     increment_nonce(&session.outgoing_nonce);
     increment_nonce(&session.incoming_nonce);
 

@@ -42,7 +42,6 @@ int attempt_boot() {
         }
 
         // Step 3: send message
-        // TODO validate opcode inside issue_cmd
         len = issue_cmd(component_id, MIT_CMD_BOOTREQ);
         if (len == ERROR_RETURN) {
             boot_err;
@@ -94,7 +93,6 @@ int attempt_boot() {
         }
 
         // Step 6: send message
-        // TODO validate opcode inside issue_cmd
         len = issue_cmd(component_id, MIT_CMD_BOOT);
         if (len == ERROR_RETURN) {
             boot_err;
@@ -102,7 +100,6 @@ int attempt_boot() {
         }
 
         // Step 7: Print boot msg
-        // TODO ensure response is a string :)
         response->rawBytes[sizeof(mit_message_t) - 1] = 0;
         print_info("0x%08x>%s\n", component_id, response->boot.bootMsg);
     }

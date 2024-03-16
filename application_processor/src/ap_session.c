@@ -60,7 +60,6 @@ static int make_mit_init_packet(mit_comp_id_t component_id) {
         return ERROR_RETURN;
     }
 
-    // TODO best place to do this?
     increment_nonce(&session->outgoing_nonce);
 
     return SUCCESS_RETURN;

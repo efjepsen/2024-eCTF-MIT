@@ -122,7 +122,6 @@ int issue_cmd(mit_comp_id_t component_id, mit_opcode_t expected_opcode) {
         return ERROR_RETURN;
     }
 
-    // TODO validate current tx packet belongs to stated component id
     mit_packet_t * packet = get_tx_packet();
     if (packet->ad.comp_id != component_id) {
         print_error("issue_cmd: packet in buf doesnt match given component id\n");
@@ -189,8 +188,6 @@ int issue_cmd(mit_comp_id_t component_id, mit_opcode_t expected_opcode) {
         return ERROR_RETURN;
     }
 
-    // TODO best place for this?
-    // increase incoming nonce
     increment_nonce(&session->incoming_nonce);
 
     /********************************************************/
@@ -227,7 +224,7 @@ void set_ad(mit_packet_t * packet, mit_comp_id_t comp_id, mit_opcode_t opcode, u
     packet->ad.comp_id = comp_id;
     packet->ad.opcode = opcode;
     packet->ad.len = len;
-    packet->ad.for_ap = false; // TODO use ifdefs w/ AP_BOOT_MSG to resolve this in common code?
+    packet->ad.for_ap = false;
 }
 
 /**
@@ -303,7 +300,6 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
         return ERROR_RETURN;
     }
 
-    // TODO best place to increase nonce?
     increment_nonce(&session->outgoing_nonce);
 
     return SUCCESS_RETURN;

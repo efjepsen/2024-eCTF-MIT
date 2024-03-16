@@ -46,7 +46,6 @@ int attest_component(uint32_t component_id) {
     }
 
     // Step 3: send message
-    // TODO validate opcode inside issue_cmd
     len = issue_cmd(component_id, MIT_CMD_ATTESTREQ);
     if (len == ERROR_RETURN) {
         return ERROR_RETURN;
@@ -68,14 +67,12 @@ int attest_component(uint32_t component_id) {
     }
 
     // Step 6: send message
-    // TODO validate opcode inside issue_cmd
     len = issue_cmd(component_id, MIT_CMD_ATTEST);
     if (len == ERROR_RETURN) {
         return ERROR_RETURN;
     }
 
     // Step 7: Print attestation data
-    // TODO ensure response is a string :)
     response->rawBytes[sizeof(mit_message_t) - 1] = 0;
     print_info("C>0x%08x\n", component_id);
     print_info("%s", response->attest.customerData);

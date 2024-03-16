@@ -111,8 +111,6 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
         return ERROR_RETURN;
     }
 
-    // TODO best place for this?
-    // increase incoming nonce
     increment_nonce(&session->incoming_nonce);
 
     /********************************************************/
