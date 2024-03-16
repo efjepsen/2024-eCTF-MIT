@@ -585,8 +585,6 @@ int main(void) {
     // Initialize Component
     i2c_addr_t addr = component_id_to_i2c_addr(COMPONENT_ID);
     board_link_init(addr);
-    
-    LED_On(LED2);
 
     int len, ret;
 
