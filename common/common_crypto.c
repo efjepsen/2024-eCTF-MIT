@@ -33,14 +33,18 @@ int mit_sha256(const uint8_t * input, uint8_t len, mit_hash_t * hash) {
     return ret;
 }
 
-// TODO check for null nonces
-
 int mit_encrypt(mit_packet_t * packet, uint8_t * plaintext, uint8_t len) {
 
     const uint8_t * iv    = packet->ad.nonce.rawBytes;
     const uint8_t * inAAD = &packet->ad;
     uint8_t * ciphertext  = packet->message.rawBytes;
     uint8_t * authTag     = packet->authTag.rawBytes;
+
+    if ((mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, null_nonce) == 0) ||
+        (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, null_nonce) == 0) ||
+        (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, null_nonce) == 0)) {
+        return -1;
+    }
 
     return wc_ChaCha20Poly1305_Encrypt(
         SHARED_SECRET_KEY, iv, // key, iv
@@ -57,6 +61,12 @@ int mit_decrypt(mit_packet_t * packet, uint8_t * plaintext) {
     const uint8_t * ciphertext  = packet->message.rawBytes;
     const uint8_t * authTag     = packet->authTag.rawBytes;
     const uint8_t len           = packet->ad.len;
+
+    if ((mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, null_nonce) == 0) ||
+        (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, null_nonce) == 0) ||
+        (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, null_nonce) == 0)) {
+        return -1;
+    }
 
     return wc_ChaCha20Poly1305_Decrypt(
         SHARED_SECRET_KEY, iv,
