@@ -12,9 +12,6 @@
 int attest_component(uint32_t component_id);
 
 // Attest a component if the PIN is correct
-void attempt_attest(void);
-
-// Compare the entered PIN to the correct PIN
-int validate_pin(void);
+int attempt_attest(void);
 
 #endif
