@@ -59,84 +59,151 @@ mit_comp_id_t get_component_id(uint8_t id) {
     return ERROR_RETURN;
 }
 
+// Validate packet in the received buffer
+static int __attribute__((optimize("O0"))) validate_rx_packet(mit_comp_id_t component_id, mit_opcode_t expected_opcode) {
+    mit_packet_t * rx_packet = (mit_packet_t *)receive_buffer;
+
+    // Check authenticated data fields
+
+    // REDUNDANT
+    if ((rx_packet->ad.comp_id != component_id) ||
+        (rx_packet->ad.comp_id != component_id) ||
+        (rx_packet->ad.comp_id != component_id)) {
+        return ERROR_RETURN;
+    }
+
+    // REDUNDANT
+    if ((rx_packet->ad.for_ap != true) ||
+        (rx_packet->ad.for_ap != true) ||
+        (rx_packet->ad.for_ap != true)) {
+        return ERROR_RETURN;
+    }
+
+    // REDUNDANT
+    if ((rx_packet->ad.len > MIT_MAX_MSG_LEN) ||
+        (rx_packet->ad.len > MIT_MAX_MSG_LEN) ||
+        (rx_packet->ad.len > MIT_MAX_MSG_LEN)) {
+        return ERROR_RETURN;
+    }
+
+    // REDUNDANT
+    if ((rx_packet->ad.opcode != expected_opcode) ||
+        (rx_packet->ad.opcode != expected_opcode) ||
+        (rx_packet->ad.opcode != expected_opcode)) {
+        return ERROR_RETURN;        
+    }
+
+    // Check nonce
+    mit_session_t * session = get_session_of_component(component_id);
+
+    // REDUNDANT
+    if ((session == NULL) ||
+        (session == NULL) ||
+        (session == NULL)) {
+        return ERROR_RETURN;
+    }
+
+    // REDUNDANT
+    if ((mit_ConstantCompare_nonce(session->incoming_nonce.rawBytes, rx_packet->ad.nonce.rawBytes) != 0) ||
+        (mit_ConstantCompare_nonce(session->incoming_nonce.rawBytes, rx_packet->ad.nonce.rawBytes) != 0) ||
+        (mit_ConstantCompare_nonce(session->incoming_nonce.rawBytes, rx_packet->ad.nonce.rawBytes) != 0)) {
+        return ERROR_RETURN;
+    }
+
+    return SUCCESS_RETURN;
+}
+
 // Send a command to a component and receive the result
-int issue_cmd(mit_comp_id_t component_id, mit_opcode_t expected_opcode) {
-    int ret;
+int __attribute__((optimize("O0"))) issue_cmd(mit_comp_id_t component_id, mit_opcode_t expected_opcode) {
+    int ret = ERROR_RETURN;
+    mit_packet_t * rx_packet = (mit_packet_t *)receive_buffer;
+    mit_packet_t * tx_packet = (mit_packet_t *)transmit_buffer;
 
     i2c_addr_t addr = component_id_to_i2c_addr((uint32_t)component_id);
 
+    mit_session_t * session = get_session_of_component(component_id);
+    // REDUNDANT
+    if ((session == NULL) ||
+        (session == NULL) ||
+        (session == NULL)) {
+        return ERROR_RETURN;
+    }
+
     ret = validate_session(component_id);
-    if (ret != SUCCESS_RETURN) {
+    // REDUNDANT
+    if ((ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN)) {
         print_error("issue_cmd: validate_session failed\n");
         return ERROR_RETURN;
     }
 
-    mit_packet_t * packet = get_tx_packet();
-    if (packet->ad.comp_id != component_id) {
+    // REDUNDANT
+    if ((tx_packet->ad.comp_id != component_id) ||
+        (tx_packet->ad.comp_id != component_id) ||
+        (tx_packet->ad.comp_id != component_id)) {
         print_error("issue_cmd: packet in buf doesnt match given component id\n");
         return ERROR_RETURN;
     }
 
     // TODO cleanup use of transmit_buffer, receive_buffer here. Not necessary as args?
     // Send message
-    int result = send_mit_packet(addr, (mit_packet_t *)transmit_buffer);
-    if (result == ERROR_RETURN) {
+    ret = send_mit_packet(addr, tx_packet);
+    // REDUNDANT
+    if ((ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN)) {
         print_error("issue_cmd: send_mit_packet error\n");
         return ERROR_RETURN;
     }
 
     // Receive message
-    int len = poll_and_receive_packet(addr, receive_buffer);
-    if (len == ERROR_RETURN) {
+    // REDUNDANT
+    memset(rx_packet, 0, sizeof(mit_packet_t));
+    memset(rx_packet, 0, sizeof(mit_packet_t));
+    memset(rx_packet, 0, sizeof(mit_packet_t));
+    int len = poll_and_receive_packet(addr, rx_packet);
+    // REDUNDANT
+    if ((len == ERROR_RETURN) ||
+        (len == ERROR_RETURN) ||
+        (len == ERROR_RETURN)) {
         print_error("issue_cmd: poll_and_receive_packet error\n");
         return ERROR_RETURN;
     }
 
     /*************** VALIDATE RECEIVED PACKET ****************/
-    packet = get_rx_packet();
 
-    if (packet->ad.comp_id != component_id) {
-        print_error("rx packet (0x%08x) doesn't match given component id (0x%08x)\n", packet->ad.comp_id, component_id);
+    // REDUNDANT
+    if ((validate_rx_packet(component_id, expected_opcode) != SUCCESS_RETURN) ||
+        (validate_rx_packet(component_id, expected_opcode) != SUCCESS_RETURN) ||
+        (validate_rx_packet(component_id, expected_opcode) != SUCCESS_RETURN)) {
+        memset(rx_packet, 0, sizeof(mit_packet_t));
+        memset(rx_packet, 0, sizeof(mit_packet_t));
+        print_error("issue_cmd: validate_rx_packet failed\n");
         return ERROR_RETURN;
     }
 
-    if (packet->ad.for_ap != true) {
-        print_error("rx packet not tagged for AP\n");
+    // OK, we can go ahead and decrypt now. Hopefully all those redundant checks served us well!
+
+    // REDUNDANT
+    memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
+    memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
+    memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
+
+    ret = mit_decrypt(rx_packet, ap_plaintext);
+    // REDUNDANT
+    if ((ret != 0) ||
+        (ret != 0) ||
+        (ret != 0)) {
+        print_error("decryption failed with error %i\n", ret);
+        // REDUNDANT
+        memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
+        memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
+        memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
         return ERROR_RETURN;
     }
 
-    // TODO use message len lookup table?
-    if (packet->ad.len == 0) {
-        print_error("rx packet has null message length\n");
-        return ERROR_RETURN;
-    }
-
-    if (packet->ad.opcode != expected_opcode) {
-        print_error("rx packet has wrong opcode, expected 0x%02x, got 0x%02x\n", expected_opcode, packet->ad.opcode);
-        return ERROR_RETURN;
-    }
-
-    mit_session_t * session = get_session_of_component(component_id);
-    if (session == NULL) {
-        print_error("Session not found for component id 0x%08x\n", component_id);
-    }
-
-    // Validate incoming nonce matches expected nonce
-    if (mit_ConstantCompare_nonce(session->incoming_nonce.rawBytes, packet->ad.nonce.rawBytes) == 0) {
-        ret = mit_decrypt(packet, ap_plaintext);
-
-        if (ret != SUCCESS_RETURN) {
-            print_error("decryption failed with error %i\n", ret);
-            memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
-            return ERROR_RETURN;
-        }
-    } else {
-        print_error("Incoming nonce (seq 0x%08x) doesn't match expected nonce (seq 0x%08x)\n",
-            packet->ad.nonce.sequenceNumber, session->incoming_nonce.sequenceNumber
-        );
-        return ERROR_RETURN;
-    }
-
+    // TODO redundify
     increment_nonce(&session->incoming_nonce);
 
     /********************************************************/
@@ -228,17 +295,16 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
     }
 
     // if the nonce is 0, generate a random nonce
-    while (mit_ConstantCompare_nonce(session->outgoing_nonce.rawBytes, null_nonce) == 0) {
-        get_rand_bytes(session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+    if ((mit_ConstantCompare_nonce(session->outgoing_nonce.rawBytes, null_nonce) == 0) ||
+        (mit_ConstantCompare_nonce(session->outgoing_nonce.rawBytes, null_nonce) == 0) ||
+        (mit_ConstantCompare_nonce(session->outgoing_nonce.rawBytes, null_nonce) == 0)) {
+        return ERROR_RETURN;
     }
 
     memcpy(packet->ad.nonce.rawBytes, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(packet->ad.nonce.rawBytes, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(packet->ad.nonce.rawBytes, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
 
-    // TODO do we really need this :)
-    if (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, session->outgoing_nonce.rawBytes) != 0) {
-        print_error("Failed to copy nonce!\n");
-        return ERROR_RETURN;
-    }
     /****************************/
 
     ret = mit_encrypt(packet, data, len);
