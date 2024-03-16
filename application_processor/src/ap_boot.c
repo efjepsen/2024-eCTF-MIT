@@ -17,6 +17,11 @@ int attempt_boot() {
     mit_comp_id_t component_id;
     mit_message_t * response = (mit_message_t *)ap_plaintext;
 
+    // REDUNDANT
+    memset(boot_challenges, 0, sizeof(mit_challenge_t)*COMPONENT_CNT);
+    memset(boot_challenges, 0, sizeof(mit_challenge_t)*COMPONENT_CNT);
+    memset(boot_challenges, 0, sizeof(mit_challenge_t)*COMPONENT_CNT);
+
     // TODO random delay
 
     // Validate that all provisioned components are alive and well.
