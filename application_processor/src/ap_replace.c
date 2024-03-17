@@ -85,6 +85,14 @@ int compare_token(char * token) {
 // Swap component IN with component OUT
 int __attribute__((optimize("O0"))) swap_components(mit_comp_id_t component_id_in, mit_comp_id_t component_id_out) {
     flash_entry * flash_status = get_flash_status();
+    i2c_addr_t addr = component_id_to_i2c_addr(component_id_in);
+
+    // Check against denylist
+    if ((addr <  0x8)  ||
+        (addr >= 0x78) ||
+        (addr == 0x18 || addr == 0x28 || addr == 0x36)) {
+        return ERROR_RETURN;
+    }
 
     // Ensure that component_id_in is not already provisioned
     // REDUNDANT
