@@ -9,14 +9,13 @@ static int validate_init_rx_packet(mit_comp_id_t component_id);
 
 // TODO store in ecc ram?
 // TODO do we need 32 sessions? supporting only 2 component ids seems fine.
-mit_session_t sessions[32];
+mit_session_t sessions[32] = {0};
 
 // Outgoing nonces for sessions are generated at boot.
 void session_init(void) {
     // Copy stored component_ids into sessions.
     // Initialize nonce's to {0}.
     for (int i = 0; i < COMPONENT_CNT; i++) {
-        memset(sessions[i].rawBytes, 0, sizeof(mit_session_t));
         sessions[i].component_id = get_component_id(i);
 
         // Initialize outgoing nonces to some random value
@@ -25,6 +24,7 @@ void session_init(void) {
         get_rand_bytes(sessions[i].outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
     }
 
+    // REDUNDANT
     for (int i = 0; i < COMPONENT_CNT; i++) {
         // Initialize outgoing nonces to some random value
         get_rand_bytes(sessions[i].outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
