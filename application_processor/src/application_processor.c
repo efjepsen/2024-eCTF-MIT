@@ -82,6 +82,8 @@ int main() {
     while (1) {
         recv_input("Enter Command: ", 7);
 
+        // TODO send ack/bad cmd on fails of attempt_*
+
         // Execute requested command
         if (!strncmp(buf, "list", 4)) {
             scan_components();
