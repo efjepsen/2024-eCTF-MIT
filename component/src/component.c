@@ -67,15 +67,12 @@ int process_attest(void);
 uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN];
 uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
 
-/******************************* MIT UTILITIES ********************************/
-
 #define COMP_PLAINTEXT_LEN 256
-
- // TODO gross data allocation ?
-uint8_t working_buffer[MIT_MAX_MSG_LEN];
 uint8_t comp_plaintext[COMP_PLAINTEXT_LEN];
 
 mit_session_t session = {0};
+
+/******************************* MIT UTILITIES ********************************/
 
 void session_init(void) {
     // REDUNDANT
