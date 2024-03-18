@@ -10,14 +10,6 @@ with open("/dev/random", "rb") as f:
     attest  = f.read(SALT_SIZE).hex()
     replace = f.read(SALT_SIZE).hex()
 
-# TODO WARNING CRITICAL THIS IS BAD AND ONLY
-# SERVES TO MAKE TESTING LESS ANNOYING
-# REMOVE THIS OR EVERYTHING IS DOOMED
-secret  = "0"*KEY_SIZE*2
-attest  = "0"*SALT_SIZE*2
-replace = "0"*SALT_SIZE*2
-# REMOVE THIS OR EVERYTHING IS DOOMED
-
 secret_c_str  = "".join(["\\x" +  secret[i:i+2] for i in range(0,  len(secret), 2)])
 attest_c_str  = "".join(["\\x" +  attest[i:i+2] for i in range(0,  len(attest), 2)])
 replace_c_str = "".join(["\\x" + replace[i:i+2] for i in range(0, len(replace), 2)])
