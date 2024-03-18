@@ -397,7 +397,7 @@ int __attribute__((optimize("O0"))) component_process_cmd() {
     memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
     memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
 
-    // Validate incoming nonce matches expected nonce
+    // Validate integrity of packet
     ret = mit_decrypt(packet, comp_plaintext);
 
     // REDUNDANT
@@ -409,16 +409,35 @@ int __attribute__((optimize("O0"))) component_process_cmd() {
         return ERROR_RETURN;
     }
 
+    // Clear plaintext buffer, we decrypt again inside process_*
+    // REDUNDANT
+    memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
+    memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
+    memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
+
     // Output to application processor dependent on command received
     switch (packet->ad.opcode) {
     case MIT_CMD_BOOTREQ:
-        return process_boot();
+        ret = process_boot();
+        break;
     case MIT_CMD_ATTESTREQ:
-        return process_attest();
+        ret = process_attest();
+        break;
     default:
-        printf("Error: Unrecognized command received\n");
-        return ERROR_RETURN;
+        ret = ERROR_RETURN;
     }
+
+    // Clear plaintext buffer & receive buffer
+    // REDUNDANT
+    memset(packet, 0, sizeof(mit_packet_t));
+    memset(packet, 0, sizeof(mit_packet_t));
+    memset(packet, 0, sizeof(mit_packet_t));
+    // REDUNDANT
+    memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
+    memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
+    memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
+
+    return ret;
 }
 
 int process_boot() {
