@@ -148,7 +148,7 @@ static int issue_init_cmd(mit_comp_id_t component_id) {
 // Ensures that we have an active session with a given component_id
 // If not, we establish one.
 int __attribute__((optimize("O0"))) validate_session(mit_comp_id_t component_id) {
-    int ret;
+    int ret = ERROR_RETURN;
 
     // Find session ptr
     mit_session_t * session = get_session_of_component(component_id);
@@ -160,9 +160,8 @@ int __attribute__((optimize("O0"))) validate_session(mit_comp_id_t component_id)
 
     // If incoming_nonce is set, we have established a session already
     // REDUNDANT
-    if ((mit_ConstantCompare_nonce(session->incoming_nonce.rawBytes, null_nonce) != 0) ||
-        (mit_ConstantCompare_nonce(session->incoming_nonce.rawBytes, null_nonce) != 0) ||
-        (mit_ConstantCompare_nonce(session->incoming_nonce.rawBytes, null_nonce) != 0)) {
+    ret =  mit_ConstantCompare_nonce(session->incoming_nonce.rawBytes, null_nonce);
+    if ((ret != 0) && (ret != 0) && (ret != 0)) {
         return SUCCESS_RETURN;
     }
 
