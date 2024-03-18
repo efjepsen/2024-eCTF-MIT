@@ -75,16 +75,13 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
 uint8_t working_buffer[MIT_MAX_MSG_LEN];
 uint8_t comp_plaintext[COMP_PLAINTEXT_LEN];
 
-mit_session_t session;
+mit_session_t session = {0};
 
 void session_init(void) {
-    // Initialize nonce's to {0}.
-    memset(session.rawBytes, 0, sizeof(mit_session_t));
-
-    // Initialize outgoing nonce to some random value
-    while (mit_ConstantCompare_nonce(session.outgoing_nonce.rawBytes, null_nonce) == 0) {
-        get_rand_bytes(session.outgoing_nonce.rawBytes, MIT_NONCE_SIZE);
-    }
+    // REDUNDANT
+    get_rand_bytes(session.outgoing_nonce.rawBytes, MIT_NONCE_SIZE);
+    get_rand_bytes(session.outgoing_nonce.rawBytes, MIT_NONCE_SIZE);
+    get_rand_bytes(session.outgoing_nonce.rawBytes, MIT_NONCE_SIZE);
 }
 
 bool valid_session(void) {
@@ -580,6 +577,9 @@ int main(void) {
 
     // MIT: Initialize our custom features
     common_init();
+    // REDUNDANT
+    session_init();
+    session_init();
     session_init();
     
     // Initialize Component
@@ -589,6 +589,11 @@ int main(void) {
     int len, ret;
 
     while (1) {
+        // REDUNDANT
+        memset(receive_buffer, 0, MAX_I2C_MESSAGE_LEN);
+        memset(receive_buffer, 0, MAX_I2C_MESSAGE_LEN);
+        memset(receive_buffer, 0, MAX_I2C_MESSAGE_LEN);
+
         // Wait for a packet
         len = wait_and_receive_packet(receive_buffer);
 
@@ -598,7 +603,8 @@ int main(void) {
             continue;
         }
 
-        if (valid_session()) {
+        // REDUNDANT
+        if (valid_session() && valid_session() && valid_session()) {
             // Normal command processing
             ret = component_process_cmd();
         } else {
