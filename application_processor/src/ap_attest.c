@@ -15,8 +15,6 @@ static char pin_buf[6] = {0};
 
 static int compare_pin(char * pin);
 
-// TODO add wrong guess delays.
-
 // Attest a component if the PIN is correct
 int attempt_attest() {
     char * buf = get_uart_buf();
@@ -29,10 +27,12 @@ int attempt_attest() {
 
     // REDUNDANT
     if (compare_pin(pin_buf) || compare_pin(pin_buf) || compare_pin(pin_buf)) {
+        delay_4s;
         print_error("Invalid PIN!\n");
         return ERROR_RETURN;
     }
 
+    delay_1s;
     print_debug("Pin Accepted!\n");
 
     uint32_t component_id;
@@ -42,6 +42,7 @@ int attempt_attest() {
     // Why not check again? :-)
     // REDUNDANT
     if (compare_pin(pin_buf) || compare_pin(pin_buf) || compare_pin(pin_buf)) {
+        delay_4s;
         print_error("Invalid PIN!\n");
         return ERROR_RETURN;
     }

@@ -14,8 +14,6 @@ static uint8_t guessed_hash[MIT_HASH_SIZE] = {0};
 static int compare_token(char * token);
 static int swap_components(mit_comp_id_t component_id_in, mit_comp_id_t component_id_out);
 
-// TODO add wrong guess delays.
-
 // Replace a component if the PIN is correct
 int attempt_replace() {
     char * buf = get_uart_buf();
@@ -23,10 +21,12 @@ int attempt_replace() {
 
     // REDUNDANT
     if (compare_token(buf) || compare_token(buf) || compare_token(buf)) {
+        delay_4s;
         print_error("Invalid Token!\n");
         return ERROR_RETURN;
     }
 
+    delay_1s;
     print_debug("Token Accepted!\n");
 
     uint32_t component_id_in = 0;
