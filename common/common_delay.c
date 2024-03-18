@@ -7,8 +7,8 @@
 
 #include "common_delay.h"
 
-// 25ms
-#define small_delay_mod 25000
+// 2.222*2 ms
+#define small_delay_mod 4444
 
 void delay_random_small(void) {
     uint32_t delay_us = 0;
