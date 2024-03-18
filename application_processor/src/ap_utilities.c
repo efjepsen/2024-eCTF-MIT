@@ -60,7 +60,7 @@ mit_comp_id_t get_component_id(uint8_t id) {
 }
 
 // Validate packet in the received buffer
-static int __attribute__((optimize("O0"))) validate_rx_packet(mit_comp_id_t component_id, mit_opcode_t expected_opcode) {
+int __attribute__((optimize("O0"))) validate_rx_packet(mit_comp_id_t component_id, mit_opcode_t expected_opcode) {
     mit_packet_t * rx_packet = (mit_packet_t *)receive_buffer;
 
     // Check authenticated data fields

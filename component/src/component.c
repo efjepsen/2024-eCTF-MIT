@@ -289,6 +289,10 @@ int __attribute__((optimize("O0"))) make_mit_packet(mit_comp_id_t component_id, 
  * This function must be implemented by your team to align with the security requirements.
 */
 void secure_send(uint8_t* buffer, uint8_t len) {
+    memset(transmit_buffer, 0, sizeof(mit_packet_t));
+    memset(transmit_buffer, 0, sizeof(mit_packet_t));
+    memset(transmit_buffer, 0, sizeof(mit_packet_t));
+
     if (!make_mit_packet(COMPONENT_ID, MIT_CMD_POSTBOOT, buffer, len)) {
         send_packet_and_ack((mit_packet_t *)transmit_buffer);
     }
@@ -304,48 +308,33 @@ void secure_send(uint8_t* buffer, uint8_t len) {
  * Securely receive data over I2C. This function is utilized in POST_BOOT functionality.
  * This function must be implemented by your team to align with the security requirements.
 */
-int secure_receive(uint8_t* buffer) {
-    int ret;
+int __attribute__((optimize("O0"))) secure_receive(uint8_t* buffer) {
+    int ret = ERROR_RETURN;
     mit_packet_t * packet = (mit_packet_t *) receive_buffer;
     mit_nonce_t old_nonce = {0};
+
+    memset(buffer, 0, 64);
+    memset(buffer, 0, 64);
+    memset(buffer, 0, 64);
 
     uint8_t len = wait_and_receive_packet(packet);
 
    /*************** VALIDATE RECEIVED PACKET ****************/
 
-    if (packet->ad.comp_id != COMPONENT_ID) {
-        printf("err: rx packet (0x%08x) doesn't match given component id (0x%08x)\n", packet->ad.comp_id, COMPONENT_ID);
+    // REDUNDANT
+    if ((validate_packet(MIT_CMD_POSTBOOT) != SUCCESS_RETURN) ||
+        (validate_packet(MIT_CMD_POSTBOOT) != SUCCESS_RETURN) ||
+        (validate_packet(MIT_CMD_POSTBOOT) != SUCCESS_RETURN)) {
+        printf("validation failed\n");
         return ERROR_RETURN;
     }
 
-    if (packet->ad.for_ap != false) {
-        printf("err: rx packet not tagged for component\n");
-        return ERROR_RETURN;
-    }
-
-    if (packet->ad.len == 0) {
-        printf("err: rx packet has null message length\n");
-        return ERROR_RETURN;
-    }
-
-    if (packet->ad.opcode != MIT_CMD_POSTBOOT) {
-        printf("err: secure_send: bad opcode 0x%02x\n", packet->ad.comp_id);
-        return ERROR_RETURN;
-    }
-
-    // Validate incoming nonce matches expected nonce
-    if (mit_ConstantCompare_nonce(session.incoming_nonce.rawBytes, packet->ad.nonce.rawBytes) == 0) {
-        ret = mit_decrypt(packet, comp_plaintext);
-
-        if (ret != SUCCESS_RETURN) {
-            printf("err: secure_receive: decryption failed with error %i\n", ret);
-            memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
-            return ERROR_RETURN;
-        }
-    } else {
-        printf("err: Incoming nonce (seq 0x%08x) doesn't match expected nonce (seq 0x%08x)\n",
-            packet->ad.nonce.sequenceNumber, session.incoming_nonce.sequenceNumber
-        );
+    ret = mit_decrypt(packet, comp_plaintext);
+    // REDUNDANT
+    if ((ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN)) {
+        printf("decryption failed\n");
         return ERROR_RETURN;
     }
 

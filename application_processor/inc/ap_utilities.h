@@ -38,6 +38,9 @@ void flash_first_boot(void);
 // Rewrite our provisioned component info into flash
 void rewrite_flash_entry(void);
 
+// Validate packet in the receive buffer
+int validate_rx_packet(mit_comp_id_t component_id, mit_opcode_t expected_opcode);
+
 // Send a command to a component and receive the result
 int issue_cmd(mit_comp_id_t component_id, mit_opcode_t expected_opcode);
 
