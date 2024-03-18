@@ -85,39 +85,57 @@ bool valid_session(void) {
     return mit_ConstantCompare_nonce(session.incoming_nonce.rawBytes, null_nonce) != 0;
 }
 
-int validate_packet(mit_opcode_t opcode) {
-    mit_packet_t * packet = (mit_packet_t *) receive_buffer;
+int __attribute__((optimize("O0"))) validate_packet(mit_opcode_t expected_opcode) {
+    mit_packet_t * rx_packet = (mit_packet_t *) receive_buffer;
 
-    if (packet->ad.comp_id != COMPONENT_ID) {
+    // REDUNDANT
+    if ((rx_packet->ad.comp_id != COMPONENT_ID) ||
+        (rx_packet->ad.comp_id != COMPONENT_ID) ||
+        (rx_packet->ad.comp_id != COMPONENT_ID)) {
         printf("component_id mismatch\n");
         return ERROR_RETURN;
     }
 
-    if (packet->ad.for_ap != false) {
+    // REDUNDANT
+    if ((rx_packet->ad.for_ap != false) ||
+        (rx_packet->ad.for_ap != false) ||
+        (rx_packet->ad.for_ap != false)) {
         printf("for_ap is true\n");
         return ERROR_RETURN;
     }
 
-    // TODO use length-lookup struct
-    if (packet->ad.len == 0) {
+    // REDUNDANT
+    if ((rx_packet->ad.len > MIT_MAX_MSG_LEN) ||
+        (rx_packet->ad.len > MIT_MAX_MSG_LEN) ||
+        (rx_packet->ad.len > MIT_MAX_MSG_LEN)) {
         printf("len not 0\n");
         return ERROR_RETURN;
     }
 
-    if (packet->ad.opcode != opcode) {
+    // REDUNDANT
+    if ((rx_packet->ad.opcode != expected_opcode) ||
+        (rx_packet->ad.opcode != expected_opcode) ||
+        (rx_packet->ad.opcode != expected_opcode)) {
         printf("opcode mismatch\n");
         return ERROR_RETURN;
     }
 
-    // Check received nonce matches expected nonce
-    if (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, session.incoming_nonce.rawBytes) != 0) {
-        printf("nonce mismatch\n");
-        printf("packet->ad.nonce.rawBytes: 0x%08x\n", packet->ad.nonce.sequenceNumber);
-        printf("session.incoming_nonce.rawBytes: 0x%08x\n", session.incoming_nonce.sequenceNumber);
+    // Just check again we have a valid session :)
+    // REDUNDANT
+    if (!valid_session() || !valid_session() || !valid_session()) {
         return ERROR_RETURN;
     }
 
-    increment_nonce(&session.incoming_nonce);
+    // Check received nonce matches expected nonce
+    // REDUNDANT
+    if ((mit_ConstantCompare_nonce(rx_packet->ad.nonce.rawBytes, session.incoming_nonce.rawBytes) != 0) ||
+        (mit_ConstantCompare_nonce(rx_packet->ad.nonce.rawBytes, session.incoming_nonce.rawBytes) != 0) ||
+        (mit_ConstantCompare_nonce(rx_packet->ad.nonce.rawBytes, session.incoming_nonce.rawBytes) != 0)) {
+        printf("nonce mismatch\n");
+        printf("packet->ad.nonce.rawBytes: 0x%08x\n", rx_packet->ad.nonce.sequenceNumber);
+        printf("session.incoming_nonce.rawBytes: 0x%08x\n", session.incoming_nonce.sequenceNumber);
+        return ERROR_RETURN;
+    }
 
     return SUCCESS_RETURN;
 }
@@ -361,6 +379,8 @@ int process_boot() {
         return ERROR_RETURN;
     }
 
+    increment_nonce(&session.incoming_nonce);
+
     ret = mit_decrypt(packet, comp_plaintext);
     if (ret != SUCCESS_RETURN) {
         printf("decryption failed\n");
@@ -392,6 +412,8 @@ int process_boot() {
     if (ret != SUCCESS_RETURN) {
         return ERROR_RETURN;
     }
+
+    increment_nonce(&session.incoming_nonce);
 
     ret = mit_decrypt(packet, comp_plaintext);
     if (ret != SUCCESS_RETURN) {
@@ -434,6 +456,8 @@ int process_attest() {
         return ERROR_RETURN;
     }
 
+    increment_nonce(&session.incoming_nonce);
+
     ret = mit_decrypt(packet, comp_plaintext);
     if (ret != SUCCESS_RETURN) {
         printf("decryption failed\n");
@@ -466,6 +490,8 @@ int process_attest() {
     if (ret != SUCCESS_RETURN) {
         return ERROR_RETURN;
     }
+
+    increment_nonce(&session.incoming_nonce);
 
     ret = mit_decrypt(packet, comp_plaintext);
     if (ret != SUCCESS_RETURN) {
