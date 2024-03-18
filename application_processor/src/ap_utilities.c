@@ -211,6 +211,12 @@ int __attribute__((optimize("O0"))) issue_cmd(mit_comp_id_t component_id, mit_op
     memcpy(old_nonce.rawBytes, session->incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session->incoming_nonce.rawBytes, sizeof(mit_nonce_t));
 
+    if (mit_ConstantCompare_nonce(session->incoming_nonce.rawBytes, old_nonce.rawBytes) != 0) {
+        memset(rx_packet, 0, sizeof(mit_packet_t));
+        memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
+        return ERROR_RETURN;
+    }
+
     increment_nonce(&session->incoming_nonce, &old_nonce);
     increment_nonce(&session->incoming_nonce, &old_nonce);
     increment_nonce(&session->incoming_nonce, &old_nonce);
@@ -349,6 +355,11 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
     memcpy(old_nonce.rawBytes, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    if (mit_ConstantCompare_nonce(session->outgoing_nonce.rawBytes, old_nonce.rawBytes) != 0) {
+        memset(packet, 0, sizeof(mit_packet_t));
+        return ERROR_RETURN;
+    }
 
     increment_nonce(&session->outgoing_nonce, &old_nonce);
     increment_nonce(&session->outgoing_nonce, &old_nonce);

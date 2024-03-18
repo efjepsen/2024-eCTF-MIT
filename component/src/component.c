@@ -264,6 +264,11 @@ int __attribute__((optimize("O0"))) make_mit_packet(mit_comp_id_t component_id, 
     memcpy(old_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
 
+    if (mit_ConstantCompare_nonce(session.outgoing_nonce.rawBytes, old_nonce.rawBytes) != 0) {
+        memset(transmit_buffer, 0, sizeof(mit_packet_t));
+        return ERROR_RETURN;
+    }
+
     increment_nonce(&session.outgoing_nonce, &old_nonce);
     increment_nonce(&session.outgoing_nonce, &old_nonce);
     increment_nonce(&session.outgoing_nonce, &old_nonce);
@@ -349,6 +354,11 @@ int secure_receive(uint8_t* buffer) {
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    if (mit_ConstantCompare_nonce(session.incoming_nonce.rawBytes, old_nonce.rawBytes) != 0) {
+        memset(receive_buffer, 0, sizeof(mit_packet_t));
+        return ERROR_RETURN;
+    }
 
     increment_nonce(&session.incoming_nonce, &old_nonce);
     increment_nonce(&session.incoming_nonce, &old_nonce);
@@ -491,6 +501,11 @@ int process_boot() {
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
 
+    if (mit_ConstantCompare_nonce(session.incoming_nonce.rawBytes, old_nonce.rawBytes) != 0) {
+        memset(receive_buffer, 0, sizeof(mit_packet_t));
+        return ERROR_RETURN;
+    }
+
     increment_nonce(&session.incoming_nonce, &old_nonce);
     increment_nonce(&session.incoming_nonce, &old_nonce);
     increment_nonce(&session.incoming_nonce, &old_nonce);
@@ -533,6 +548,11 @@ int process_boot() {
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    if (mit_ConstantCompare_nonce(session.incoming_nonce.rawBytes, old_nonce.rawBytes) != 0) {
+        memset(receive_buffer, 0, sizeof(mit_packet_t));
+        return ERROR_RETURN;
+    }
 
     increment_nonce(&session.incoming_nonce, &old_nonce);
     increment_nonce(&session.incoming_nonce, &old_nonce);
@@ -583,6 +603,11 @@ int process_attest() {
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
 
+    if (mit_ConstantCompare_nonce(session.incoming_nonce.rawBytes, old_nonce.rawBytes) != 0) {
+        memset(receive_buffer, 0, sizeof(mit_packet_t));
+        return ERROR_RETURN;
+    }
+
     increment_nonce(&session.incoming_nonce, &old_nonce);
     increment_nonce(&session.incoming_nonce, &old_nonce);
     increment_nonce(&session.incoming_nonce, &old_nonce);
@@ -627,6 +652,11 @@ int process_attest() {
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    if (mit_ConstantCompare_nonce(session.incoming_nonce.rawBytes, old_nonce.rawBytes) != 0) {
+        memset(receive_buffer, 0, sizeof(mit_packet_t));
+        return ERROR_RETURN;
+    }
 
     increment_nonce(&session.incoming_nonce, &old_nonce);
     increment_nonce(&session.incoming_nonce, &old_nonce);
@@ -733,6 +763,11 @@ int process_init_session() {
     memcpy(old_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
 
+    if (mit_ConstantCompare_nonce(session.outgoing_nonce.rawBytes, old_nonce.rawBytes) != 0) {
+        memset(transmit_buffer, 0, sizeof(mit_packet_t));
+        return ERROR_RETURN;
+    }
+
     increment_nonce(&session.outgoing_nonce, &old_nonce);
     increment_nonce(&session.outgoing_nonce, &old_nonce);
     increment_nonce(&session.outgoing_nonce, &old_nonce);
@@ -744,6 +779,11 @@ int process_init_session() {
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    if (mit_ConstantCompare_nonce(session.incoming_nonce.rawBytes, old_nonce.rawBytes) != 0) {
+        memset(receive_buffer, 0, sizeof(mit_packet_t));
+        return ERROR_RETURN;
+    }
 
     increment_nonce(&session.incoming_nonce, &old_nonce);
     increment_nonce(&session.incoming_nonce, &old_nonce);
