@@ -109,7 +109,6 @@ int __attribute__((optimize("O0"))) secure_receive(i2c_addr_t address, uint8_t* 
     if ((ret != 0) ||
         (ret != 0) ||
         (ret != 0)) {
-        print_error("decryption failed with error %i\n", ret);
         // REDUNDANT
         memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
         memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);

@@ -119,7 +119,6 @@ int __attribute__((optimize("O0"))) swap_components(mit_comp_id_t component_id_i
             // Grab outgoing session
             mit_session_t * session = get_session_of_component(component_id_out);
             if (session == NULL) {
-                print_debug("0x%08x is provisioned, but has no active session\n", component_id_out);
                 return ERROR_RETURN;
             }
 

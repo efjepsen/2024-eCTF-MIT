@@ -10,7 +10,8 @@ static mit_challenge_t null_challenge = {0};
 
 #define boot_err print_error("Could not boot\n")
 
-// TODO clear boot_msgs, boot_challenges on errors
+#define clear_boot_challenges memset(boot_challenges, 0, sizeof(mit_challenge_t)*COMPONENT_CNT)
+
 int attempt_boot() {
     int ret, len;
     mit_challenge_t r1;
@@ -18,22 +19,20 @@ int attempt_boot() {
     mit_message_t * response = (mit_message_t *)ap_plaintext;
 
     // REDUNDANT
-    memset(boot_challenges, 0, sizeof(mit_challenge_t)*COMPONENT_CNT);
-    memset(boot_challenges, 0, sizeof(mit_challenge_t)*COMPONENT_CNT);
-    memset(boot_challenges, 0, sizeof(mit_challenge_t)*COMPONENT_CNT);
-
-    // TODO random delay
+    clear_boot_challenges;
+    clear_boot_challenges;
+    clear_boot_challenges;
 
     // Validate that all provisioned components are alive and well.
     for (int id = 0; id < COMPONENT_CNT; id++) {
         component_id = get_component_id(id);
         if (component_id == ERROR_RETURN) {
+            clear_boot_challenges;
+            clear_boot_challenges;
+            clear_boot_challenges;
             boot_err;
             return ERROR_RETURN;
         }
-
-        // Step 0: validate component
-        // TODO already done in messaging tbh
 
         // Step 1: generate random challenge r1
         // REDUNDANT
@@ -50,6 +49,9 @@ int attempt_boot() {
 
         ret = make_mit_packet(component_id, MIT_CMD_BOOTREQ, bootReq.rawBytes, sizeof(mit_message_bootreq_t));
         if (ret != SUCCESS_RETURN) {
+            clear_boot_challenges;
+            clear_boot_challenges;
+            clear_boot_challenges;
             boot_err;
             return ret;
         }
@@ -57,6 +59,9 @@ int attempt_boot() {
         // Step 3: send message
         len = issue_cmd(component_id, MIT_CMD_BOOTREQ);
         if (len == ERROR_RETURN) {
+            clear_boot_challenges;
+            clear_boot_challenges;
+            clear_boot_challenges;
             boot_err;
             return ERROR_RETURN;
         }
@@ -66,6 +71,9 @@ int attempt_boot() {
         if (mit_ConstantCompare_challenge(response->bootReq.r1.rawBytes, bootReq.r1.rawBytes) ||
             mit_ConstantCompare_challenge(response->bootReq.r1.rawBytes, bootReq.r1.rawBytes) ||
             mit_ConstantCompare_challenge(response->bootReq.r1.rawBytes, bootReq.r1.rawBytes)) {
+            clear_boot_challenges;
+            clear_boot_challenges;
+            clear_boot_challenges;
             boot_err;
             return ERROR_RETURN;
         }
@@ -83,6 +91,9 @@ int attempt_boot() {
         if ((mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) ||
             (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) ||
             (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0)) {
+            clear_boot_challenges;
+            clear_boot_challenges;
+            clear_boot_challenges;
             boot_err;
             return ERROR_RETURN;
         }
@@ -94,6 +105,9 @@ int attempt_boot() {
         if ((mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) ||
             (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) ||
             (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0)) {
+            clear_boot_challenges;
+            clear_boot_challenges;
+            clear_boot_challenges;
             boot_err;
             return ERROR_RETURN;
         }
@@ -103,6 +117,9 @@ int attempt_boot() {
     for (int id = 0; id < COMPONENT_CNT; id++) {
         mit_comp_id_t component_id = get_component_id(id);
         if (component_id == ERROR_RETURN) {
+            clear_boot_challenges;
+            clear_boot_challenges;
+            clear_boot_challenges;
             boot_err;
             return ERROR_RETURN;
         }
@@ -116,6 +133,9 @@ int attempt_boot() {
 
         ret = make_mit_packet(component_id, MIT_CMD_BOOT, boot.rawBytes, sizeof(mit_message_boot_t));
         if (ret != SUCCESS_RETURN) {
+            clear_boot_challenges;
+            clear_boot_challenges;
+            clear_boot_challenges;
             boot_err;
             return ret;
         }
@@ -123,6 +143,9 @@ int attempt_boot() {
         // Step 6: send message
         len = issue_cmd(component_id, MIT_CMD_BOOT);
         if (len == ERROR_RETURN) {
+            clear_boot_challenges;
+            clear_boot_challenges;
+            clear_boot_challenges;
             boot_err;
             return ERROR_RETURN;
         }
@@ -138,6 +161,9 @@ int attempt_boot() {
         if ((mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) ||
             (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) ||
             (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0)) {
+            clear_boot_challenges;
+            clear_boot_challenges;
+            clear_boot_challenges;
             boot_err;
             return ERROR_RETURN;
         }

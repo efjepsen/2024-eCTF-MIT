@@ -7,8 +7,6 @@
 
 static int validate_init_rx_packet(mit_comp_id_t component_id);
 
-// TODO store in ecc ram?
-// TODO do we need 32 sessions? supporting only 2 component ids seems fine.
 mit_session_t sessions[32] = {0};
 
 // Outgoing nonces for sessions are generated at boot.
@@ -143,7 +141,6 @@ static int issue_init_cmd(mit_comp_id_t component_id) {
         (validate_init_rx_packet(component_id) != SUCCESS_RETURN)) {
         memset(rx_packet, 0, sizeof(mit_packet_t));
         memset(rx_packet, 0, sizeof(mit_packet_t));
-        print_error("issue_cmd: validate_rx_packet failed\n");
         return ERROR_RETURN;
     }
 
@@ -153,7 +150,6 @@ static int issue_init_cmd(mit_comp_id_t component_id) {
     memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
     ret = mit_decrypt(rx_packet, ap_plaintext);
     if (ret != SUCCESS_RETURN) {
-        print_error("decryption failed with error %i\n", ret);
         memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
         return ERROR_RETURN;
     }

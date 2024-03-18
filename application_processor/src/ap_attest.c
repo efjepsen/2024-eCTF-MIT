@@ -60,8 +60,6 @@ int attempt_attest() {
 int attest_component(uint32_t component_id) {
     int ret, len;
     mit_challenge_t r1;
-    // Step 0: validate component
-    // TODO already done in messaging tbh
 
     // Step 1: generate random challenge r1
     // REDUNDANT
@@ -101,7 +99,6 @@ int attest_component(uint32_t component_id) {
     // REDUNDANT
     if (compare_pin(pin_buf) || compare_pin(pin_buf) || compare_pin(pin_buf)) {
         print_error("Invalid PIN!\n");
-        // TODO send some abort ack to component?
         return ERROR_RETURN;
     }
 

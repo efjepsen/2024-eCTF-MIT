@@ -44,7 +44,6 @@ int validate_rx_packet(mit_comp_id_t component_id, mit_opcode_t expected_opcode)
 // Send a command to a component and receive the result
 int issue_cmd(mit_comp_id_t component_id, mit_opcode_t expected_opcode);
 
-// TODO remove *packet arg
 // Send packet at *packet to addr
 int send_mit_packet(i2c_addr_t addr, mit_packet_t * packet);
 
@@ -54,7 +53,7 @@ bool is_valid_component(mit_comp_id_t component_id);
 // Helper to construct packet, stores in transmit_buffer
 int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * data, uint8_t len);
 
-/******************************* GROSS INTERFACE ********************************/
+/******************************* PTRS ********************************/
 mit_packet_t * get_rx_packet(void);
 mit_packet_t * get_tx_packet(void);
 uint8_t * get_i2c_rx_buffer(void);

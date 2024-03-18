@@ -82,8 +82,6 @@ int main() {
     while (1) {
         recv_input("Enter Command: ", 7);
 
-        // TODO send ack/bad cmd on fails of attempt_*
-
         // Execute requested command
         if (!strncmp(buf, "list", 4)) {
             scan_components();
@@ -93,25 +91,6 @@ int main() {
             attempt_replace();
         } else if (!strncmp(buf, "attest", 6)) {
             attempt_attest();
-        } else if (!strncmp(buf, "custom", 6)) {
-            printf("sizeof(mit_opcode_t):  %d\n", sizeof(mit_opcode_t));
-            printf("sizeof(mit_ad_t):      %d\n", sizeof(mit_ad_t));
-            printf("sizeof(mit_authtag_t): %d\n", sizeof(mit_authtag_t));
-            printf("sizeof(mit_message_t): %d\n", sizeof(mit_message_t));
-            printf("sizeof(mit_packet_t):  %d\n", sizeof(mit_packet_t));
-            printf("sizeof(mit_nonce_t):   %d\n", sizeof(mit_nonce_t));
-            printf("sizeof(mit_comp_id_t): %d\n", sizeof(mit_comp_id_t));
-            printf("--- sessions info ---\n");
-            for (int i = 0; i < COMPONENT_CNT; i++) {
-                mit_comp_id_t component_id = get_component_id(i);
-                mit_session_t * session = get_session_of_component(component_id);
-                printf("component_id: 0x%08x\n", component_id);
-                printf("  session.component_id: 0x%08x\n", session->component_id);
-                printf("  session.outgoing_nonce: 0x");
-                print_hex(session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
-                printf("  session.incoming_nonce: 0x");
-                print_hex(session->incoming_nonce.rawBytes, sizeof(mit_nonce_t));
-            }
         } else {
             print_error("Unrecognized command\n");
         }

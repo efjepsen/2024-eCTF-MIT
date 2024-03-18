@@ -13,7 +13,7 @@ flash_entry flash_status;
 uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN];
 uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
 
-// TODO gross data allocation?
+// Plaintext buffer
 uint8_t ap_plaintext[AP_PLAINTEXT_LEN];
 
 /********************************* UTILITIES **********************************/
@@ -24,13 +24,11 @@ flash_entry * get_flash_status(void) {
 }
 
 // Test application has been booted before
-// TODO random delays
 void flash_first_boot(void) {
     flash_simple_read(FLASH_ADDR, (uint32_t*)&flash_status, sizeof(flash_entry));
 
     // Write Component IDs from flash if first boot e.g. flash unwritten
     if (flash_status.flash_magic != FLASH_MAGIC) {
-        print_debug("First boot, setting flash!\n");
         flash_simple_erase_page(FLASH_ADDR);
 
         flash_status.flash_magic = FLASH_MAGIC;
@@ -44,7 +42,6 @@ void flash_first_boot(void) {
 }
 
 // Erase & rewrite flash status to flash memory
-// TODO random delays
 void rewrite_flash_entry(void) {
     flash_simple_erase_page(FLASH_ADDR);
     flash_simple_write(FLASH_ADDR, (uint32_t*)&flash_status, sizeof(flash_entry));
@@ -135,7 +132,6 @@ int __attribute__((optimize("O0"))) issue_cmd(mit_comp_id_t component_id, mit_op
     if ((ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN)) {
-        print_error("issue_cmd: validate_session failed\n");
         return ERROR_RETURN;
     }
 
@@ -143,18 +139,15 @@ int __attribute__((optimize("O0"))) issue_cmd(mit_comp_id_t component_id, mit_op
     if ((tx_packet->ad.comp_id != component_id) ||
         (tx_packet->ad.comp_id != component_id) ||
         (tx_packet->ad.comp_id != component_id)) {
-        print_error("issue_cmd: packet in buf doesnt match given component id\n");
         return ERROR_RETURN;
     }
 
-    // TODO cleanup use of transmit_buffer, receive_buffer here. Not necessary as args?
     // Send message
     ret = send_mit_packet(addr, tx_packet);
     // REDUNDANT
     if ((ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN)) {
-        print_error("issue_cmd: send_mit_packet error\n");
         return ERROR_RETURN;
     }
 
@@ -168,7 +161,6 @@ int __attribute__((optimize("O0"))) issue_cmd(mit_comp_id_t component_id, mit_op
     if ((len == ERROR_RETURN) ||
         (len == ERROR_RETURN) ||
         (len == ERROR_RETURN)) {
-        print_error("issue_cmd: poll_and_receive_packet error\n");
         return ERROR_RETURN;
     }
 
@@ -180,7 +172,6 @@ int __attribute__((optimize("O0"))) issue_cmd(mit_comp_id_t component_id, mit_op
         (validate_rx_packet(component_id, expected_opcode) != SUCCESS_RETURN)) {
         memset(rx_packet, 0, sizeof(mit_packet_t));
         memset(rx_packet, 0, sizeof(mit_packet_t));
-        print_error("issue_cmd: validate_rx_packet failed\n");
         return ERROR_RETURN;
     }
 
@@ -196,7 +187,6 @@ int __attribute__((optimize("O0"))) issue_cmd(mit_comp_id_t component_id, mit_op
     if ((ret != 0) ||
         (ret != 0) ||
         (ret != 0)) {
-        print_error("decryption failed with error %i\n", ret);
         // REDUNDANT
         memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
         memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
@@ -227,23 +217,6 @@ int __attribute__((optimize("O0"))) issue_cmd(mit_comp_id_t component_id, mit_op
     return len;
 }
 
-/******************************* MIT UTILITIES ********************************/
-
-// static void print_packet(mit_packet_t * packet) {
-//     printf("packet @ 0x%08x\n", (uint32_t)packet);
-//     printf("    nonce: ");
-//     print_hex(packet->ad.nonce.rawBytes, sizeof(mit_nonce_t));
-//     printf("  comp_id: %08x\n", packet->ad.comp_id);
-//     printf("   opcode: %02x\n", packet->ad.opcode);
-//     printf("      len: %02x\n", packet->ad.len);
-//     printf("   for_ap: %02x\n", packet->ad.for_ap);
-//     printf("  authTag: ");
-//     print_hex(packet->authTag.rawBytes, sizeof(mit_authtag_t));
-//     printf("   cipher: ");
-//     print_hex(packet->message.rawBytes, sizeof(mit_message_t));
-// }
-
-// TODO remove
 // Send packet at *packet to addr
 int send_mit_packet(i2c_addr_t addr, mit_packet_t * packet) {
     uint8_t len = packet->ad.len + sizeof(mit_ad_t) + sizeof(mit_authtag_t);
@@ -251,8 +224,6 @@ int send_mit_packet(i2c_addr_t addr, mit_packet_t * packet) {
 }
 
 void set_ad(mit_packet_t * packet, mit_comp_id_t comp_id, mit_opcode_t opcode, uint8_t len) {
-    // TODO limits check on len?
-    // packet->ad.nonce.sequenceNumber = 0; // TODO
     packet->ad.comp_id = comp_id;
     packet->ad.opcode = opcode;
     packet->ad.len = len;
@@ -288,16 +259,13 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
     int ret = ERROR_RETURN;
     mit_nonce_t old_nonce = {0};
 
-    // TODO best place for validate_session?
     // REDUNDANT
     if ((validate_session(component_id) != SUCCESS_RETURN) ||
         (validate_session(component_id) != SUCCESS_RETURN) ||
         (validate_session(component_id) != SUCCESS_RETURN)) {
-        print_error("Failed to validate session for component id 0x%08x\n", component_id);
         return ERROR_RETURN;
     }
 
-    // TODO bounds check on len?
     mit_packet_t * packet = (mit_packet_t *)transmit_buffer;
 
     // Clear tx buffer
@@ -310,8 +278,6 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
     set_ad(packet, component_id, opcode, len);
 
     /***** NONCE GENERATION/LOOKUP *****/
-
-    // WARNING reusing a nonce is the worst thing you can possibly do.
 
     mit_session_t * session = get_session_of_component(component_id);
     if (session == NULL) {
@@ -335,7 +301,6 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
     if ((mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, session->outgoing_nonce.rawBytes) != 0) ||
         (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, session->outgoing_nonce.rawBytes) != 0) ||
         (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, session->outgoing_nonce.rawBytes) != 0)) {
-        printf("error: Failed to copy nonce!\n");
         return ERROR_RETURN;
     }
 
@@ -344,7 +309,6 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
     ret = mit_encrypt(packet, data, len);
 
     if (ret != SUCCESS_RETURN) {
-        print_error("encryption failed with error %i\n", ret);
         memset(packet, 0, sizeof(mit_packet_t)); // clear packet
         return ERROR_RETURN;
     }
@@ -369,7 +333,7 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
     return SUCCESS_RETURN;
 }
 
-/******************************* GROSS INTERFACE ********************************/
+/******************************* PTRS ********************************/
 mit_packet_t * get_rx_packet(void) {
     return (mit_packet_t *)receive_buffer;
 }

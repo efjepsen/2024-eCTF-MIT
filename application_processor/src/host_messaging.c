@@ -13,7 +13,6 @@
 
 #include "host_messaging.h"
 
-// TODO put in safer place in memory? :)
 char uart_buf[256];
 
 char * get_uart_buf(void) {
