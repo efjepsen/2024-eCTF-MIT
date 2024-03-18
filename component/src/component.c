@@ -142,7 +142,6 @@ int __attribute__((optimize("O0"))) validate_packet(mit_opcode_t expected_opcode
 
 void set_ad(mit_packet_t * packet, mit_comp_id_t comp_id, mit_opcode_t opcode, uint8_t len) {
     // TODO limits check on len?
-    packet->ad.nonce.sequenceNumber = 0; // TODO
     packet->ad.comp_id = comp_id;
     packet->ad.opcode = opcode;
     packet->ad.len = len;
@@ -157,11 +156,17 @@ void set_ad(mit_packet_t * packet, mit_comp_id_t comp_id, mit_opcode_t opcode, u
  * @param data: uint8_t *, ptr for data to store in message ield
  * @param len: uint8_t, len of data to copy into message field
  */
-int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * data, uint8_t len) {
-    int ret;
+int __attribute__((optimize("O0"))) make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * data, uint8_t len) {
+    int ret = ERROR_RETURN;
 
     // TODO bounds check on len?
     mit_packet_t * packet = (mit_packet_t *)transmit_buffer;
+
+    // Clear tx buffer
+    // REDUNDANT
+    memset(packet, 0, sizeof(mit_packet_t));
+    memset(packet, 0, sizeof(mit_packet_t));
+    memset(packet, 0, sizeof(mit_packet_t));
 
     // Set Authenticated Data field
     set_ad(packet, component_id, opcode, len);
@@ -170,15 +175,23 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
 
     // WARNING reusing a nonce is the worst thing you can possibly do.
 
-    // if the nonce is 0, generate a random nonce
-    while (mit_ConstantCompare_nonce(session.outgoing_nonce.rawBytes, null_nonce) == 0) {
-        get_rand_bytes(session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+    // if the nonce is 0, abort
+    if ((mit_ConstantCompare_nonce(session.outgoing_nonce.rawBytes, null_nonce) == 0) ||
+        (mit_ConstantCompare_nonce(session.outgoing_nonce.rawBytes, null_nonce) == 0) ||
+        (mit_ConstantCompare_nonce(session.outgoing_nonce.rawBytes, null_nonce) == 0)) {
+        return ERROR_RETURN;
     }
 
+    // REDUNDANT
+    memcpy(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
 
-    // TODO do we really need this :)
-    if (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes) != 0) {
+    // Confirm we actually copied
+    // REDUNDANT
+    if ((mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes) != 0) ||
+        (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes) != 0) ||
+        (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes) != 0)) {
         printf("error: Failed to copy nonce!\n");
         return ERROR_RETURN;
     }
@@ -187,7 +200,9 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
 
     // Encrypt in data
     ret = mit_encrypt(packet, data, len);
-    if (ret != SUCCESS_RETURN) {
+    if ((ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN)) {
         printf("error: encryption failed with error code %i\n", ret);
         memset(packet, 0, sizeof(mit_packet_t));
         return ERROR_RETURN;
