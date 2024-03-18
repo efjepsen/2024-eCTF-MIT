@@ -17,6 +17,8 @@
 
 */
 int __attribute__((optimize("O0"))) secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
+    delay_rnd;
+
     int ret = ERROR_RETURN;
     mit_comp_id_t component_id = ERROR_RETURN;
     mit_packet_t * tx_packet = get_tx_packet();
@@ -25,7 +27,11 @@ int __attribute__((optimize("O0"))) secure_send(uint8_t address, uint8_t* buffer
     memset(tx_packet, 0, sizeof(mit_packet_t));
     memset(tx_packet, 0, sizeof(mit_packet_t));
 
+    delay_rnd;
+
     for (int id = 0; id < COMPONENT_CNT; id++) {
+        delay_rnd;
+
         if (component_id_to_i2c_addr(get_component_id(id)) == address) {
             component_id = get_component_id(id);
         }
@@ -34,6 +40,8 @@ int __attribute__((optimize("O0"))) secure_send(uint8_t address, uint8_t* buffer
     if (component_id == ERROR_RETURN) {
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     ret = make_mit_packet(component_id, MIT_CMD_POSTBOOT, buffer, len);
     if ((ret != SUCCESS_RETURN) ||
@@ -57,12 +65,16 @@ int __attribute__((optimize("O0"))) secure_send(uint8_t address, uint8_t* buffer
  * This function must be implemented by your team to align with the security requirements.
 */
 int __attribute__((optimize("O0"))) secure_receive(i2c_addr_t address, uint8_t* buffer) {
+    delay_rnd;
+
     int ret, len;
     mit_packet_t * packet = get_rx_packet();
     mit_nonce_t old_nonce = {0};
     mit_comp_id_t component_id = ERROR_RETURN;
 
     for (int id = 0; id < COMPONENT_CNT; id++) {
+        delay_rnd;
+
         if (component_id_to_i2c_addr(get_component_id(id)) == address) {
             component_id = get_component_id(id);
         }
@@ -71,6 +83,8 @@ int __attribute__((optimize("O0"))) secure_receive(i2c_addr_t address, uint8_t* 
     if (component_id == ERROR_RETURN) {
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     mit_session_t * session = get_session_of_component(component_id);
     if ((session == NULL) ||
@@ -82,11 +96,15 @@ int __attribute__((optimize("O0"))) secure_receive(i2c_addr_t address, uint8_t* 
     memset(buffer, 0, 64);
     memset(packet, 0, sizeof(mit_packet_t));
 
+    delay_rnd;
+
     len = poll_and_receive_packet(address, packet);
     if (len == ERROR_RETURN) {
         return ERROR_RETURN;
     }
    /*************** VALIDATE RECEIVED PACKET ****************/
+
+    delay_rnd;
 
     // REDUNDANT
     if ((validate_rx_packet(component_id, MIT_CMD_POSTBOOT) != SUCCESS_RETURN) ||
@@ -99,12 +117,19 @@ int __attribute__((optimize("O0"))) secure_receive(i2c_addr_t address, uint8_t* 
 
     // OK, we can go ahead and decrypt now. Hopefully all those redundant checks served us well!
 
+    delay_rnd;
+
     // REDUNDANT
     memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
     memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
     memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
 
+    delay_rnd;
+
     ret = mit_decrypt(packet, ap_plaintext);
+
+    delay_rnd;
+
     // REDUNDANT
     if ((ret != 0) ||
         (ret != 0) ||
@@ -116,18 +141,26 @@ int __attribute__((optimize("O0"))) secure_receive(i2c_addr_t address, uint8_t* 
         return ERROR_RETURN;
     }
 
+    delay_rnd;
+
     /*** INCREMENT NONCE ***/
     memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
+
+    delay_rnd;
 
     memcpy(old_nonce.rawBytes, session->incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session->incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session->incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    delay_rnd;
 
     if (mit_ConstantCompare_nonce(session->incoming_nonce.rawBytes, old_nonce.rawBytes) != 0) {
         memset(packet, 0, sizeof(mit_packet_t));
         memset(ap_plaintext, 0, AP_PLAINTEXT_LEN);
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     increment_nonce(&session->incoming_nonce, &old_nonce);
     increment_nonce(&session->incoming_nonce, &old_nonce);
@@ -152,6 +185,8 @@ int __attribute__((optimize("O0"))) secure_receive(i2c_addr_t address, uint8_t* 
  * This function must be implemented by your team.
 */
 int get_provisioned_ids(uint32_t* buffer) {
+    delay_rnd;
+
     for (int id = 0; id < COMPONENT_CNT; id++) {
         buffer[id] = get_component_id(id);
     }

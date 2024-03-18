@@ -13,6 +13,9 @@ static mit_challenge_t null_challenge = {0};
 #define clear_boot_challenges memset(boot_challenges, 0, sizeof(mit_challenge_t)*COMPONENT_CNT)
 
 int attempt_boot() {
+
+    delay_rnd;
+
     int ret, len;
     mit_challenge_t r1;
     mit_comp_id_t component_id;
@@ -25,6 +28,9 @@ int attempt_boot() {
 
     // Validate that all provisioned components are alive and well.
     for (int id = 0; id < COMPONENT_CNT; id++) {
+
+        delay_rnd;
+
         component_id = get_component_id(id);
         if (component_id == ERROR_RETURN) {
             clear_boot_challenges;
@@ -40,12 +46,16 @@ int attempt_boot() {
         get_random_challenge(&r1);
         get_random_challenge(&r1);
 
+        delay_rnd;
+
         // Step 2: construct BootReq message
         mit_message_bootreq_t bootReq = {0};
         // REDUNDANT
         memcpy(bootReq.r1.rawBytes, r1.rawBytes, sizeof(mit_challenge_t));
         memcpy(bootReq.r1.rawBytes, r1.rawBytes, sizeof(mit_challenge_t));
         memcpy(bootReq.r1.rawBytes, r1.rawBytes, sizeof(mit_challenge_t));
+
+        delay_rnd;
 
         ret = make_mit_packet(component_id, MIT_CMD_BOOTREQ, bootReq.rawBytes, sizeof(mit_message_bootreq_t));
         if (ret != SUCCESS_RETURN) {
@@ -56,6 +66,8 @@ int attempt_boot() {
             return ret;
         }
 
+        delay_rnd;
+
         // Step 3: send message
         len = issue_cmd(component_id, MIT_CMD_BOOTREQ);
         if (len == ERROR_RETURN) {
@@ -65,6 +77,8 @@ int attempt_boot() {
             boot_err;
             return ERROR_RETURN;
         }
+
+        delay_rnd;
 
         // Step 4: Validate r1 is present in response
         // REDUNDANT
@@ -78,15 +92,21 @@ int attempt_boot() {
             return ERROR_RETURN;
         }
 
+        delay_rnd;
+
         // Step 5: Save r2
         // REDUNDANT
         memcpy(boot_challenges[id].rawBytes, response->bootReq.r2.rawBytes, sizeof(mit_challenge_t));
         memcpy(boot_challenges[id].rawBytes, response->bootReq.r2.rawBytes, sizeof(mit_challenge_t));
         memcpy(boot_challenges[id].rawBytes, response->bootReq.r2.rawBytes, sizeof(mit_challenge_t));
+
+        delay_rnd;
     }
 
     // Confirm that we saved boot challenges for all provisioned components
     for (int id = 0; id < COMPONENT_CNT; id++) {
+        delay_rnd;
+
         // REDUNDANT
         if ((mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) ||
             (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) ||
@@ -101,6 +121,8 @@ int attempt_boot() {
 
     // Confirm that we saved boot challenges for all provisioned components... again.
     for (int id = 0; id < COMPONENT_CNT; id++) {
+        delay_rnd;
+
         // REDUNDANT
         if ((mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) ||
             (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) ||
@@ -115,6 +137,8 @@ int attempt_boot() {
 
     // Command provisioned components to boot.
     for (int id = 0; id < COMPONENT_CNT; id++) {
+        delay_rnd;
+
         mit_comp_id_t component_id = get_component_id(id);
         if (component_id == ERROR_RETURN) {
             clear_boot_challenges;
@@ -130,6 +154,8 @@ int attempt_boot() {
         memcpy(boot.r2.rawBytes, boot_challenges[id].rawBytes, sizeof(mit_challenge_t));
         memcpy(boot.r2.rawBytes, boot_challenges[id].rawBytes, sizeof(mit_challenge_t));
         memcpy(boot.r2.rawBytes, boot_challenges[id].rawBytes, sizeof(mit_challenge_t));
+    
+        delay_rnd;
 
         ret = make_mit_packet(component_id, MIT_CMD_BOOT, boot.rawBytes, sizeof(mit_message_boot_t));
         if (ret != SUCCESS_RETURN) {
@@ -139,6 +165,8 @@ int attempt_boot() {
             boot_err;
             return ret;
         }
+
+        delay_rnd;
 
         // Step 6: send message
         len = issue_cmd(component_id, MIT_CMD_BOOT);
@@ -150,6 +178,8 @@ int attempt_boot() {
             return ERROR_RETURN;
         }
 
+        delay_rnd;
+
         // Step 7: Print boot msg
         response->rawBytes[sizeof(mit_message_t) - 1] = 0;
         print_info("0x%08x>%s\n", component_id, response->boot.bootMsg);
@@ -157,6 +187,8 @@ int attempt_boot() {
 
     // Confirm that we saved boot challenges for all provisioned components... again... again.
     for (int id = 0; id < COMPONENT_CNT; id++) {
+        delay_rnd;
+
         // REDUNDANT
         if ((mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) ||
             (mit_ConstantCompare_challenge(boot_challenges[id].rawBytes, null_challenge.rawBytes) == 0) ||

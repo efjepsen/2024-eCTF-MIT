@@ -87,6 +87,8 @@ bool valid_session(void) {
 }
 
 int __attribute__((optimize("O0"))) validate_packet(mit_opcode_t expected_opcode) {
+    delay_rnd;
+
     mit_packet_t * rx_packet = (mit_packet_t *) receive_buffer;
 
     // REDUNDANT
@@ -96,12 +98,16 @@ int __attribute__((optimize("O0"))) validate_packet(mit_opcode_t expected_opcode
         return ERROR_RETURN;
     }
 
+    delay_rnd;
+
     // REDUNDANT
     if ((rx_packet->ad.for_ap != false) ||
         (rx_packet->ad.for_ap != false) ||
         (rx_packet->ad.for_ap != false)) {
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     // REDUNDANT
     if ((rx_packet->ad.len > MIT_MAX_MSG_LEN) ||
@@ -110,6 +116,8 @@ int __attribute__((optimize("O0"))) validate_packet(mit_opcode_t expected_opcode
         return ERROR_RETURN;
     }
 
+    delay_rnd;
+
     // REDUNDANT
     if ((rx_packet->ad.opcode != expected_opcode) ||
         (rx_packet->ad.opcode != expected_opcode) ||
@@ -117,11 +125,15 @@ int __attribute__((optimize("O0"))) validate_packet(mit_opcode_t expected_opcode
         return ERROR_RETURN;
     }
 
+    delay_rnd;
+
     // Just check again we have a valid session :)
     // REDUNDANT
     if (!valid_session() || !valid_session() || !valid_session()) {
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     // Check received nonce matches expected nonce
     // REDUNDANT
@@ -136,6 +148,8 @@ int __attribute__((optimize("O0"))) validate_packet(mit_opcode_t expected_opcode
 
 // Like above, but we don't check for opcode
 int __attribute__((optimize("O0"))) validate_any_packet(void) {
+    delay_rnd;
+
     mit_packet_t * rx_packet = (mit_packet_t *) receive_buffer;
 
     // REDUNDANT
@@ -145,12 +159,16 @@ int __attribute__((optimize("O0"))) validate_any_packet(void) {
         return ERROR_RETURN;
     }
 
+    delay_rnd;
+
     // REDUNDANT
     if ((rx_packet->ad.for_ap != false) ||
         (rx_packet->ad.for_ap != false) ||
         (rx_packet->ad.for_ap != false)) {
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     // REDUNDANT
     if ((rx_packet->ad.len > MIT_MAX_MSG_LEN) ||
@@ -159,11 +177,15 @@ int __attribute__((optimize("O0"))) validate_any_packet(void) {
         return ERROR_RETURN;
     }
 
+    delay_rnd;
+
     // Just check again we have a valid session :)
     // REDUNDANT
     if (!valid_session() || !valid_session() || !valid_session()) {
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     // Check received nonce matches expected nonce
     // REDUNDANT
@@ -192,6 +214,8 @@ void set_ad(mit_packet_t * packet, mit_comp_id_t comp_id, mit_opcode_t opcode, u
  * @param len: uint8_t, len of data to copy into message field
  */
 int __attribute__((optimize("O0"))) make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * data, uint8_t len) {
+    delay_rnd;
+
     int ret = ERROR_RETURN;
     mit_nonce_t old_nonce = {0};
 
@@ -208,6 +232,8 @@ int __attribute__((optimize("O0"))) make_mit_packet(mit_comp_id_t component_id, 
 
     /***** NONCE GENERATION/LOOKUP *****/
 
+    delay_rnd;
+
     // if the nonce is 0, abort
     if ((mit_ConstantCompare_nonce(session.outgoing_nonce.rawBytes, null_nonce) == 0) ||
         (mit_ConstantCompare_nonce(session.outgoing_nonce.rawBytes, null_nonce) == 0) ||
@@ -219,6 +245,8 @@ int __attribute__((optimize("O0"))) make_mit_packet(mit_comp_id_t component_id, 
     memcpy(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    delay_rnd;
 
     // Confirm we actually copied
     // REDUNDANT
@@ -242,14 +270,20 @@ int __attribute__((optimize("O0"))) make_mit_packet(mit_comp_id_t component_id, 
     /*** INCREMENT NONCE ***/
     memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
 
+    delay_rnd;
+
     memcpy(old_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    delay_rnd;
 
     if (mit_ConstantCompare_nonce(session.outgoing_nonce.rawBytes, old_nonce.rawBytes) != 0) {
         memset(transmit_buffer, 0, sizeof(mit_packet_t));
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     increment_nonce(&session.outgoing_nonce, &old_nonce);
     increment_nonce(&session.outgoing_nonce, &old_nonce);
@@ -270,6 +304,8 @@ int __attribute__((optimize("O0"))) make_mit_packet(mit_comp_id_t component_id, 
  * This function must be implemented by your team to align with the security requirements.
 */
 void secure_send(uint8_t* buffer, uint8_t len) {
+    delay_rnd;
+
     memset(transmit_buffer, 0, sizeof(mit_packet_t));
     memset(transmit_buffer, 0, sizeof(mit_packet_t));
     memset(transmit_buffer, 0, sizeof(mit_packet_t));
@@ -290,6 +326,8 @@ void secure_send(uint8_t* buffer, uint8_t len) {
  * This function must be implemented by your team to align with the security requirements.
 */
 int __attribute__((optimize("O0"))) secure_receive(uint8_t* buffer) {
+    delay_rnd;
+
     int ret = ERROR_RETURN;
     mit_packet_t * packet = (mit_packet_t *) receive_buffer;
     mit_nonce_t old_nonce = {0};
@@ -301,6 +339,8 @@ int __attribute__((optimize("O0"))) secure_receive(uint8_t* buffer) {
     uint8_t len = wait_and_receive_packet(packet);
 
    /*************** VALIDATE RECEIVED PACKET ****************/
+
+   delay_rnd;
 
     // REDUNDANT
     if ((validate_packet(MIT_CMD_POSTBOOT) != SUCCESS_RETURN) ||
@@ -320,14 +360,20 @@ int __attribute__((optimize("O0"))) secure_receive(uint8_t* buffer) {
     /*** INCREMENT NONCE ***/
     memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
 
+    delay_rnd;
+
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    delay_rnd;
 
     if (mit_ConstantCompare_nonce(session.incoming_nonce.rawBytes, old_nonce.rawBytes) != 0) {
         memset(receive_buffer, 0, sizeof(mit_packet_t));
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     increment_nonce(&session.incoming_nonce, &old_nonce);
     increment_nonce(&session.incoming_nonce, &old_nonce);
@@ -376,6 +422,8 @@ void boot() {
 
 // Handle a transaction from the AP
 int __attribute__((optimize("O0"))) component_process_cmd() {
+    delay_rnd;
+
     int ret = ERROR_RETURN;
     mit_packet_t * packet = (mit_packet_t *) receive_buffer;
 
@@ -384,6 +432,8 @@ int __attribute__((optimize("O0"))) component_process_cmd() {
     if (!valid_session() || !valid_session() || !valid_session()) {
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     /*************** VALIDATE RECEIVED PACKET ****************/
     if ((validate_any_packet() != SUCCESS_RETURN) ||
@@ -398,8 +448,12 @@ int __attribute__((optimize("O0"))) component_process_cmd() {
     memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
     memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
 
+    delay_rnd;
+
     // Validate integrity of packet
     ret = mit_decrypt(packet, comp_plaintext);
+
+    delay_rnd;
 
     // REDUNDANT
     if ((ret != SUCCESS_RETURN) ||
@@ -409,11 +463,15 @@ int __attribute__((optimize("O0"))) component_process_cmd() {
         return ERROR_RETURN;
     }
 
+    delay_rnd;
+
     // Clear plaintext buffer, we decrypt again inside process_*
     // REDUNDANT
     memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
     memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
     memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
+
+    delay_rnd;
 
     // Output to application processor dependent on command received
     switch (packet->ad.opcode) {
@@ -441,6 +499,8 @@ int __attribute__((optimize("O0"))) component_process_cmd() {
 }
 
 int __attribute__((optimize("O0"))) process_boot() {
+    delay_rnd;
+
     int ret = ERROR_RETURN;
     uint8_t len;
     mit_challenge_t r1, r2;
@@ -457,6 +517,8 @@ int __attribute__((optimize("O0"))) process_boot() {
         return ERROR_RETURN;
     }
 
+    delay_rnd;
+
     ret = mit_decrypt(packet, comp_plaintext);
     // REDUNDANT
     if ((ret != SUCCESS_RETURN) ||
@@ -468,19 +530,27 @@ int __attribute__((optimize("O0"))) process_boot() {
     /*** INCREMENT NONCE ***/
     memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
 
+    delay_rnd;
+
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    delay_rnd;
 
     if (mit_ConstantCompare_nonce(session.incoming_nonce.rawBytes, old_nonce.rawBytes) != 0) {
         memset(receive_buffer, 0, sizeof(mit_packet_t));
         return ERROR_RETURN;
     }
 
+    delay_rnd;
+
     increment_nonce(&session.incoming_nonce, &old_nonce);
     increment_nonce(&session.incoming_nonce, &old_nonce);
     increment_nonce(&session.incoming_nonce, &old_nonce);
     /***********************/
+
+    delay_rnd;
 
     // Step 1: Generate random challenge r2
     // REDUNDANT
@@ -493,6 +563,8 @@ int __attribute__((optimize("O0"))) process_boot() {
     memcpy(message->bootReq.r2.rawBytes, r2.rawBytes, sizeof(mit_challenge_t));
     memcpy(message->bootReq.r2.rawBytes, r2.rawBytes, sizeof(mit_challenge_t));
     memcpy(message->bootReq.r2.rawBytes, r2.rawBytes, sizeof(mit_challenge_t));
+
+    delay_rnd;
 
     // Step 3: Send response packet
     ret = make_mit_packet(COMPONENT_ID, MIT_CMD_BOOTREQ, message->bootReq.rawBytes, sizeof(mit_message_bootreq_t));
@@ -511,6 +583,8 @@ int __attribute__((optimize("O0"))) process_boot() {
         return ERROR_RETURN;
     }
 
+    delay_rnd;
+
     // Step 5: Validate packet
     // REDUNDANT
     if ((validate_packet(MIT_CMD_BOOT) != SUCCESS_RETURN) ||
@@ -518,6 +592,8 @@ int __attribute__((optimize("O0"))) process_boot() {
         (validate_packet(MIT_CMD_BOOT) != SUCCESS_RETURN)) {
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     ret = mit_decrypt(packet, comp_plaintext);
     // REDUNDANT
@@ -530,14 +606,20 @@ int __attribute__((optimize("O0"))) process_boot() {
     /*** INCREMENT NONCE ***/
     memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
 
+    delay_rnd;
+
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    delay_rnd;
 
     if (mit_ConstantCompare_nonce(session.incoming_nonce.rawBytes, old_nonce.rawBytes) != 0) {
         memset(receive_buffer, 0, sizeof(mit_packet_t));
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     increment_nonce(&session.incoming_nonce, &old_nonce);
     increment_nonce(&session.incoming_nonce, &old_nonce);
@@ -551,6 +633,8 @@ int __attribute__((optimize("O0"))) process_boot() {
         (mit_ConstantCompare_challenge(message->boot.r2.rawBytes, r2.rawBytes) != 0)) {
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     // Step 7: Stuff with boot message
     memset(message->boot.rawBytes, 0, sizeof(mit_message_boot_t));
@@ -570,6 +654,8 @@ int __attribute__((optimize("O0"))) process_boot() {
 }
 
 int __attribute__((optimize("O0"))) process_attest() {
+    delay_rnd;
+
     int ret = ERROR_RETURN;
     uint8_t len;
     mit_challenge_t r1, r2;
@@ -587,6 +673,8 @@ int __attribute__((optimize("O0"))) process_attest() {
         return ERROR_RETURN;
     }
 
+    delay_rnd;
+
     ret = mit_decrypt(packet, comp_plaintext);
     // REDUNDANT
     if ((ret != SUCCESS_RETURN) ||
@@ -598,14 +686,20 @@ int __attribute__((optimize("O0"))) process_attest() {
     /*** INCREMENT NONCE ***/
     memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
 
+    delay_rnd;
+
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    delay_rnd;
 
     if (mit_ConstantCompare_nonce(session.incoming_nonce.rawBytes, old_nonce.rawBytes) != 0) {
         memset(receive_buffer, 0, sizeof(mit_packet_t));
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     increment_nonce(&session.incoming_nonce, &old_nonce);
     increment_nonce(&session.incoming_nonce, &old_nonce);
@@ -618,11 +712,15 @@ int __attribute__((optimize("O0"))) process_attest() {
     get_random_challenge(&r2);
     get_random_challenge(&r2);
 
+    delay_rnd;
+
     // Step 2: Store r2 in response packet
     // REDUNDANT
     memcpy(attestReq->r2.rawBytes, r2.rawBytes, sizeof(mit_challenge_t));
     memcpy(attestReq->r2.rawBytes, r2.rawBytes, sizeof(mit_challenge_t));
     memcpy(attestReq->r2.rawBytes, r2.rawBytes, sizeof(mit_challenge_t));
+
+    delay_rnd;
 
     // Step 3: Send response packet
     ret = make_mit_packet(COMPONENT_ID, MIT_CMD_ATTESTREQ, attestReq->rawBytes, sizeof(mit_message_attestreq_t));
@@ -640,6 +738,8 @@ int __attribute__((optimize("O0"))) process_attest() {
         return ERROR_RETURN;
     }
 
+    delay_rnd;
+
     // Step 5: Validate packet
     // REDUNDANT
     if ((validate_packet(MIT_CMD_ATTEST) != SUCCESS_RETURN) ||
@@ -647,6 +747,8 @@ int __attribute__((optimize("O0"))) process_attest() {
         (validate_packet(MIT_CMD_ATTEST) != SUCCESS_RETURN)) {
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     ret = mit_decrypt(packet, comp_plaintext);
     // REDUNDANT
@@ -659,14 +761,20 @@ int __attribute__((optimize("O0"))) process_attest() {
     /*** INCREMENT NONCE ***/
     memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
 
+    delay_rnd;
+
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    delay_rnd;
 
     if (mit_ConstantCompare_nonce(session.incoming_nonce.rawBytes, old_nonce.rawBytes) != 0) {
         memset(receive_buffer, 0, sizeof(mit_packet_t));
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     increment_nonce(&session.incoming_nonce, &old_nonce);
     increment_nonce(&session.incoming_nonce, &old_nonce);
@@ -680,6 +788,8 @@ int __attribute__((optimize("O0"))) process_attest() {
         (mit_ConstantCompare_challenge(attest->r2.rawBytes, r2.rawBytes) != 0)) {
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     // Step 7: Stuff with attestation data
     memset(attest->rawBytes, 0, sizeof(mit_message_attest_t));
@@ -697,6 +807,8 @@ int __attribute__((optimize("O0"))) process_attest() {
 }
 
 int __attribute__((optimize("O0"))) process_init_session() {
+    delay_rnd;
+
     // Just double-check :)
     if (valid_session()) {
         return ERROR_RETURN;
@@ -709,11 +821,15 @@ int __attribute__((optimize("O0"))) process_init_session() {
 
     /*************** VALIDATE RECEIVED PACKET ****************/
 
+    delay_rnd;
+
     if ((packet->ad.comp_id != COMPONENT_ID) ||
         (packet->ad.comp_id != COMPONENT_ID) ||
         (packet->ad.comp_id != COMPONENT_ID)) {
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     if ((packet->ad.for_ap != false) ||
         (packet->ad.for_ap != false) ||
@@ -721,17 +837,23 @@ int __attribute__((optimize("O0"))) process_init_session() {
         return ERROR_RETURN;
     }
 
+    delay_rnd;
+
     if ((packet->ad.len != sizeof(mit_message_init_t)) ||
         (packet->ad.len != sizeof(mit_message_init_t)) ||
         (packet->ad.len != sizeof(mit_message_init_t))) {
         return ERROR_RETURN;
     }
 
+    delay_rnd;
+
     if ((packet->ad.opcode != MIT_CMD_INIT) ||
         (packet->ad.opcode != MIT_CMD_INIT) ||
         (packet->ad.opcode != MIT_CMD_INIT)) {
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     // Validate authTag field
     ret = mit_decrypt(packet, comp_plaintext);
@@ -742,6 +864,8 @@ int __attribute__((optimize("O0"))) process_init_session() {
         return ERROR_RETURN;
     }
 
+    delay_rnd;
+
     // If packet's nonce, and the message's ap_nonce don't match, ignore.
     mit_message_init_t * received = (mit_message_init_t *)comp_plaintext;
     if ((mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, received->ap_nonce.rawBytes) != 0) ||
@@ -749,6 +873,8 @@ int __attribute__((optimize("O0"))) process_init_session() {
         (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, received->ap_nonce.rawBytes) != 0)) {
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     // Save incoming nonce
     memcpy(session.incoming_nonce.rawBytes, received->ap_nonce.rawBytes, sizeof(mit_nonce_t));
@@ -758,6 +884,9 @@ int __attribute__((optimize("O0"))) process_init_session() {
     /***** Send init response back *****/
     // Copy our nonce into response message
     mit_message_init_t * outgoing = (mit_message_init_t *)comp_plaintext;
+    
+    delay_rnd;
+
     memcpy(outgoing->component_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(outgoing->component_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(outgoing->component_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
@@ -765,6 +894,8 @@ int __attribute__((optimize("O0"))) process_init_session() {
     packet = (mit_packet_t *)transmit_buffer;
     set_ad(packet, COMPONENT_ID, MIT_CMD_INIT, sizeof(mit_message_init_t));
     memcpy(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    delay_rnd;
 
     ret = mit_encrypt(packet, comp_plaintext, sizeof(mit_message_init_t));
     if ((ret != SUCCESS_RETURN) ||
@@ -777,14 +908,20 @@ int __attribute__((optimize("O0"))) process_init_session() {
     /*** INCREMENT NONCE ***/
     memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
 
+    delay_rnd;
+
     memcpy(old_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    delay_rnd;
 
     if (mit_ConstantCompare_nonce(session.outgoing_nonce.rawBytes, old_nonce.rawBytes) != 0) {
         memset(transmit_buffer, 0, sizeof(mit_packet_t));
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     increment_nonce(&session.outgoing_nonce, &old_nonce);
     increment_nonce(&session.outgoing_nonce, &old_nonce);
@@ -794,14 +931,20 @@ int __attribute__((optimize("O0"))) process_init_session() {
     /*** INCREMENT NONCE ***/
     memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
 
+    delay_rnd;
+
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    delay_rnd;
 
     if (mit_ConstantCompare_nonce(session.incoming_nonce.rawBytes, old_nonce.rawBytes) != 0) {
         memset(receive_buffer, 0, sizeof(mit_packet_t));
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     increment_nonce(&session.incoming_nonce, &old_nonce);
     increment_nonce(&session.incoming_nonce, &old_nonce);
@@ -839,6 +982,8 @@ int main(void) {
 
         // Wait for a packet
         len = wait_and_receive_packet(receive_buffer);
+
+        delay_rnd;
 
         // Special handling for scan commands
         if (len == sizeof(mit_comp_id_t)) {

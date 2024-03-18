@@ -16,8 +16,12 @@ static int swap_components(mit_comp_id_t component_id_in, mit_comp_id_t componen
 
 // Replace a component if the PIN is correct
 int attempt_replace() {
+    delay_rnd;
+
     char * buf = get_uart_buf();
     recv_input("Enter token: ", TOKEN_LEN);
+
+    delay_rnd;
 
     // REDUNDANT
     if (compare_token(buf) || compare_token(buf) || compare_token(buf)) {
@@ -37,6 +41,8 @@ int attempt_replace() {
     recv_input("Component ID Out: ", 10); // 0x + 8 chars
     component_id_out = (uint32_t)strtoul(buf, buf + 10, 16);
 
+    delay_rnd;
+
     if (swap_components(component_id_in, component_id_out) == ERROR_RETURN) {
         print_error("Cannot replace component 0x%08x with component 0x%08x\n",
             component_id_out, component_id_in);
@@ -49,6 +55,8 @@ int attempt_replace() {
 }
 
 int compare_token(char * token) {
+    delay_rnd;
+
     int ret;
 
     // Copy guess into end of buffer
@@ -57,11 +65,15 @@ int compare_token(char * token) {
     memcpy(&guess_buf[MIT_HASH_SIZE], token, TOKEN_LEN);
     memcpy(&guess_buf[MIT_HASH_SIZE], token, TOKEN_LEN);
 
+    delay_rnd;
+
     // Fill guessed_hash with garbage
     // REDUNDANT
     get_rand_bytes(guessed_hash, MIT_HASH_SIZE);
     get_rand_bytes(guessed_hash, MIT_HASH_SIZE);
     get_rand_bytes(guessed_hash, MIT_HASH_SIZE);
+
+    delay_rnd;
 
     // Compute hash over salt + guess
     ret = mit_sha256(guess_buf, SALT_LEN + TOKEN_LEN, guessed_hash);
@@ -70,6 +82,8 @@ int compare_token(char * token) {
     }
 
     uint8_t * hashed_token = getHashedTokenPtr();
+
+    delay_rnd;
 
     // Compare with precomputed salt+actual_token
     // REDUNDANT
@@ -84,6 +98,8 @@ int compare_token(char * token) {
 
 // Swap component IN with component OUT
 int __attribute__((optimize("O0"))) swap_components(mit_comp_id_t component_id_in, mit_comp_id_t component_id_out) {
+    delay_rnd;
+
     flash_entry * flash_status = get_flash_status();
     i2c_addr_t addr = component_id_to_i2c_addr(component_id_in);
 
@@ -94,9 +110,13 @@ int __attribute__((optimize("O0"))) swap_components(mit_comp_id_t component_id_i
         return ERROR_RETURN;
     }
 
+    delay_rnd;
+
     // Ensure that component_id_in is not already provisioned
     // REDUNDANT
     for (unsigned i = 0; i < COMPONENT_CNT; i++) {
+        delay_rnd;
+
         if ((flash_status->component_ids[i] == component_id_in) ||
             (flash_status->component_ids[i] == component_id_in) ||
             (flash_status->component_ids[i] == component_id_in)) {
@@ -106,6 +126,8 @@ int __attribute__((optimize("O0"))) swap_components(mit_comp_id_t component_id_i
 
     // Let's just check again :-)
     for (unsigned i = 0; i < COMPONENT_CNT; i++) {
+        delay_rnd;
+
         if ((flash_status->component_ids[i] == component_id_in) ||
             (flash_status->component_ids[i] == component_id_in) ||
             (flash_status->component_ids[i] == component_id_in)) {
@@ -115,12 +137,16 @@ int __attribute__((optimize("O0"))) swap_components(mit_comp_id_t component_id_i
 
     // Find the component to swap out
     for (unsigned i = 0; i < COMPONENT_CNT; i++) {
+        delay_rnd;
+
         if (flash_status->component_ids[i] == component_id_out) {
             // Grab outgoing session
             mit_session_t * session = get_session_of_component(component_id_out);
             if (session == NULL) {
                 return ERROR_RETURN;
             }
+
+            delay_rnd;
 
             // Swap out component id
             flash_status->component_ids[i] = component_id_in;
@@ -131,6 +157,8 @@ int __attribute__((optimize("O0"))) swap_components(mit_comp_id_t component_id_i
             memset(session->rawBytes, 0, sizeof(mit_session_t));
             memset(session->rawBytes, 0, sizeof(mit_session_t));
 
+            delay_rnd;
+
             session->component_id = component_id_in;
 
             // REDUNDANT
@@ -138,10 +166,14 @@ int __attribute__((optimize("O0"))) swap_components(mit_comp_id_t component_id_i
             get_rand_bytes(session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
             get_rand_bytes(session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
 
+            delay_rnd;
+
             // REDUNDANT
             memset(session->incoming_nonce.rawBytes, 0, sizeof(mit_nonce_t));
             memset(session->incoming_nonce.rawBytes, 0, sizeof(mit_nonce_t));
             memset(session->incoming_nonce.rawBytes, 0, sizeof(mit_nonce_t));
+
+            delay_rnd;
 
             // write updated component_ids to flash
             rewrite_flash_entry();

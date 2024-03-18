@@ -20,10 +20,14 @@ int attempt_attest() {
     char * buf = get_uart_buf();
     recv_input("Enter pin: ", PIN_LEN);
 
+    delay_rnd;
+
     // REDUNDANT
     memcpy(pin_buf, buf, PIN_LEN);
     memcpy(pin_buf, buf, PIN_LEN);
     memcpy(pin_buf, buf, PIN_LEN);
+
+    delay_rnd;
 
     // REDUNDANT
     if (compare_pin(pin_buf) || compare_pin(pin_buf) || compare_pin(pin_buf)) {
@@ -47,6 +51,8 @@ int attempt_attest() {
         return ERROR_RETURN;
     }
 
+    delay_rnd;
+
     if (attest_component(component_id) == SUCCESS_RETURN) {
         print_success("Attest\n");
         return SUCCESS_RETURN;
@@ -61,11 +67,15 @@ int attest_component(uint32_t component_id) {
     int ret, len;
     mit_challenge_t r1;
 
+    delay_rnd;
+
     // Step 1: generate random challenge r1
     // REDUNDANT
     get_random_challenge(&r1);
     get_random_challenge(&r1);
     get_random_challenge(&r1);
+
+    delay_rnd;
 
     // Step 2: construct AttestReq message
     mit_message_attestreq_t attestReq = {0};
@@ -74,11 +84,14 @@ int attest_component(uint32_t component_id) {
     memcpy(attestReq.r1.rawBytes, r1.rawBytes, sizeof(mit_challenge_t));
     memcpy(attestReq.r1.rawBytes, r1.rawBytes, sizeof(mit_challenge_t));
 
+    delay_rnd;
 
     ret = make_mit_packet(component_id, MIT_CMD_ATTESTREQ, attestReq.rawBytes, sizeof(mit_message_attestreq_t));
     if (ret != SUCCESS_RETURN) {
         return ret;
     }
+
+    delay_rnd;
 
     // Step 3: send message
     len = issue_cmd(component_id, MIT_CMD_ATTESTREQ);
@@ -86,14 +99,19 @@ int attest_component(uint32_t component_id) {
         return ERROR_RETURN;
     }
 
+    delay_rnd;
+
     // Step 4: Validate r1 is present in response
     mit_message_t * response = (mit_message_t *)ap_plaintext;
     // REDUNDANT
     if ((mit_ConstantCompare_challenge(response->attestReq.r1.rawBytes, attestReq.r1.rawBytes) != 0) ||
         (mit_ConstantCompare_challenge(response->attestReq.r1.rawBytes, attestReq.r1.rawBytes) != 0) ||
         (mit_ConstantCompare_challenge(response->attestReq.r1.rawBytes, attestReq.r1.rawBytes) != 0)) {
-        return ERROR_RETURN;
+        return 
+        ERROR_RETURN;
     }
+
+    delay_rnd;
 
     // Step 4b: Check again for a valid pin, just for fun.
     // REDUNDANT
@@ -102,6 +120,8 @@ int attest_component(uint32_t component_id) {
         return ERROR_RETURN;
     }
 
+    delay_rnd;
+
     // Step 5: Return r2
     mit_message_attest_t attest = {0};
     // REDUNDANT
@@ -109,16 +129,22 @@ int attest_component(uint32_t component_id) {
     memcpy(attest.r2.rawBytes, response->attestReq.r2.rawBytes, sizeof(mit_challenge_t));
     memcpy(attest.r2.rawBytes, response->attestReq.r2.rawBytes, sizeof(mit_challenge_t));
 
+    delay_rnd;
+
     ret = make_mit_packet(component_id, MIT_CMD_ATTEST, attest.rawBytes, sizeof(mit_message_attest_t));
     if (ret != SUCCESS_RETURN) {
         return ret;
     }
+
+    delay_rnd;
 
     // Step 6: send message
     len = issue_cmd(component_id, MIT_CMD_ATTEST);
     if (len == ERROR_RETURN) {
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     // Step 7: Print attestation data
     response->rawBytes[sizeof(mit_message_t) - 1] = 0;
@@ -130,11 +156,15 @@ int attest_component(uint32_t component_id) {
 static int compare_pin(char * pin) {
     int ret;
 
+    delay_rnd;
+
     // Copy guess into end of buffer
     // REDUNDANT
     memcpy(&guess_buf[MIT_HASH_SIZE], pin, PIN_LEN);
     memcpy(&guess_buf[MIT_HASH_SIZE], pin, PIN_LEN);
     memcpy(&guess_buf[MIT_HASH_SIZE], pin, PIN_LEN);
+
+    delay_rnd;
 
     // Fill guessed_hash with garbage
     // REDUNDANT
@@ -142,11 +172,15 @@ static int compare_pin(char * pin) {
     get_rand_bytes(guessed_hash, MIT_HASH_SIZE);
     get_rand_bytes(guessed_hash, MIT_HASH_SIZE);
 
+    delay_rnd;
+
     // Compute hash over salt + guess
     ret = mit_sha256(guess_buf, SALT_LEN + PIN_LEN, guessed_hash);
     if (ret != 0) {
         return ERROR_RETURN;
     }
+
+    delay_rnd;
 
     uint8_t * hashed_pin = getHashedPinPtr();
 
