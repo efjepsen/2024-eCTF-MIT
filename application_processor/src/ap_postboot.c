@@ -52,6 +52,7 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
 int secure_receive(i2c_addr_t address, uint8_t* buffer) {
     int ret, len;
     mit_packet_t * packet = get_rx_packet();
+    mit_nonce_t old_nonce = {0};
     mit_comp_id_t component_id = ERROR_RETURN;
 
     for (int id = 0; id < COMPONENT_CNT; id++) {
@@ -111,7 +112,17 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
         return ERROR_RETURN;
     }
 
-    increment_nonce(&session->incoming_nonce);
+    /*** INCREMENT NONCE ***/
+    memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
+
+    memcpy(old_nonce.rawBytes, session->incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session->incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session->incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    increment_nonce(&session->incoming_nonce, &old_nonce);
+    increment_nonce(&session->incoming_nonce, &old_nonce);
+    increment_nonce(&session->incoming_nonce, &old_nonce);
+    /***********************/
 
     /********************************************************/
     memcpy(buffer, ap_plaintext, len);

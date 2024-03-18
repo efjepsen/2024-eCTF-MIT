@@ -4,10 +4,15 @@
  */
 
 #include "common_msg.h"
+#include "common_crypto.h"
 
 uint8_t null_nonce[MIT_NONCE_SIZE] = {0};
 
-void increment_nonce(mit_nonce_t * nonce) {
+void increment_nonce(mit_nonce_t * nonce, mit_nonce_t * old_nonce) {
+    if (mit_ConstantCompare_nonce(nonce->rawBytes, old_nonce->rawBytes) != 0) {
+        return;
+    }
+
     uint32_t * sections = (uint32_t *)nonce->rawBytes;
     bool carry = true;
 

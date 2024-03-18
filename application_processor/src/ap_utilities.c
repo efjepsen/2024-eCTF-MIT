@@ -116,6 +116,7 @@ static int __attribute__((optimize("O0"))) validate_rx_packet(mit_comp_id_t comp
 // Send a command to a component and receive the result
 int __attribute__((optimize("O0"))) issue_cmd(mit_comp_id_t component_id, mit_opcode_t expected_opcode) {
     int ret = ERROR_RETURN;
+    mit_nonce_t old_nonce = {0};
     mit_packet_t * rx_packet = (mit_packet_t *)receive_buffer;
     mit_packet_t * tx_packet = (mit_packet_t *)transmit_buffer;
 
@@ -203,8 +204,17 @@ int __attribute__((optimize("O0"))) issue_cmd(mit_comp_id_t component_id, mit_op
         return ERROR_RETURN;
     }
 
-    // TODO redundify
-    increment_nonce(&session->incoming_nonce);
+    /*** INCREMENT NONCE ***/
+    memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
+
+    memcpy(old_nonce.rawBytes, session->incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session->incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session->incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    increment_nonce(&session->incoming_nonce, &old_nonce);
+    increment_nonce(&session->incoming_nonce, &old_nonce);
+    increment_nonce(&session->incoming_nonce, &old_nonce);
+    /***********************/
 
     /********************************************************/
 
@@ -270,6 +280,7 @@ bool is_valid_component(mit_comp_id_t component_id) {
  */
 int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * data, uint8_t len) {
     int ret = ERROR_RETURN;
+    mit_nonce_t old_nonce = {0};
 
     // TODO best place for validate_session?
     // REDUNDANT
@@ -332,7 +343,17 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
         return ERROR_RETURN;
     }
 
-    increment_nonce(&session->outgoing_nonce);
+    /*** INCREMENT NONCE ***/
+    memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
+
+    memcpy(old_nonce.rawBytes, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    increment_nonce(&session->outgoing_nonce, &old_nonce);
+    increment_nonce(&session->outgoing_nonce, &old_nonce);
+    increment_nonce(&session->outgoing_nonce, &old_nonce);
+    /***********************/
 
     return SUCCESS_RETURN;
 }

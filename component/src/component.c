@@ -206,6 +206,7 @@ void set_ad(mit_packet_t * packet, mit_comp_id_t comp_id, mit_opcode_t opcode, u
  */
 int __attribute__((optimize("O0"))) make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * data, uint8_t len) {
     int ret = ERROR_RETURN;
+    mit_nonce_t old_nonce = {0};
 
     // TODO bounds check on len?
     mit_packet_t * packet = (mit_packet_t *)transmit_buffer;
@@ -256,7 +257,17 @@ int __attribute__((optimize("O0"))) make_mit_packet(mit_comp_id_t component_id, 
         return ERROR_RETURN;
     }
 
-    increment_nonce(&session.outgoing_nonce);
+    /*** INCREMENT NONCE ***/
+    memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
+
+    memcpy(old_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    increment_nonce(&session.outgoing_nonce, &old_nonce);
+    increment_nonce(&session.outgoing_nonce, &old_nonce);
+    increment_nonce(&session.outgoing_nonce, &old_nonce);
+    /***********************/
 
     return SUCCESS_RETURN;
 }
@@ -290,6 +301,7 @@ void secure_send(uint8_t* buffer, uint8_t len) {
 int secure_receive(uint8_t* buffer) {
     int ret;
     mit_packet_t * packet = (mit_packet_t *) receive_buffer;
+    mit_nonce_t old_nonce = {0};
 
     uint8_t len = wait_and_receive_packet(packet);
 
@@ -331,7 +343,17 @@ int secure_receive(uint8_t* buffer) {
         return ERROR_RETURN;
     }
 
-    increment_nonce(&session.incoming_nonce);
+    /*** INCREMENT NONCE ***/
+    memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
+
+    memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    increment_nonce(&session.incoming_nonce, &old_nonce);
+    increment_nonce(&session.incoming_nonce, &old_nonce);
+    increment_nonce(&session.incoming_nonce, &old_nonce);
+    /***********************/
 
     /********************************************************/
     memcpy(buffer, comp_plaintext, len);
@@ -445,6 +467,7 @@ int process_boot() {
     uint8_t len;
     mit_challenge_t r1, r2;
     mit_message_t * message = (mit_message_t *)comp_plaintext;
+    mit_nonce_t old_nonce = {0};
 
     mit_packet_t * packet = (mit_packet_t *) receive_buffer;
 
@@ -455,13 +478,23 @@ int process_boot() {
         return ERROR_RETURN;
     }
 
-    increment_nonce(&session.incoming_nonce);
-
     ret = mit_decrypt(packet, comp_plaintext);
     if (ret != SUCCESS_RETURN) {
         printf("decryption failed\n");
         return ERROR_RETURN;
     }
+
+    /*** INCREMENT NONCE ***/
+    memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
+
+    memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    increment_nonce(&session.incoming_nonce, &old_nonce);
+    increment_nonce(&session.incoming_nonce, &old_nonce);
+    increment_nonce(&session.incoming_nonce, &old_nonce);
+    /***********************/
 
     // Step 1: Generate random challenge r2
     get_random_challenge(&r2);
@@ -489,12 +522,22 @@ int process_boot() {
         return ERROR_RETURN;
     }
 
-    increment_nonce(&session.incoming_nonce);
-
     ret = mit_decrypt(packet, comp_plaintext);
     if (ret != SUCCESS_RETURN) {
         return ERROR_RETURN;
     }
+
+    /*** INCREMENT NONCE ***/
+    memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
+
+    memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    increment_nonce(&session.incoming_nonce, &old_nonce);
+    increment_nonce(&session.incoming_nonce, &old_nonce);
+    increment_nonce(&session.incoming_nonce, &old_nonce);
+    /***********************/
 
     // Step 6: Validate r2 in attest response
     if (mit_ConstantCompare_challenge(message->boot.r2.rawBytes, r2.rawBytes) != 0) {
@@ -522,6 +565,7 @@ int process_attest() {
     int ret;
     uint8_t len;
     mit_challenge_t r1, r2;
+    mit_nonce_t old_nonce = {0};
 
     mit_packet_t * packet = (mit_packet_t *) receive_buffer;
 
@@ -532,7 +576,17 @@ int process_attest() {
         return ERROR_RETURN;
     }
 
-    increment_nonce(&session.incoming_nonce);
+    /*** INCREMENT NONCE ***/
+    memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
+
+    memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    increment_nonce(&session.incoming_nonce, &old_nonce);
+    increment_nonce(&session.incoming_nonce, &old_nonce);
+    increment_nonce(&session.incoming_nonce, &old_nonce);
+    /***********************/
 
     ret = mit_decrypt(packet, comp_plaintext);
     if (ret != SUCCESS_RETURN) {
@@ -567,7 +621,17 @@ int process_attest() {
         return ERROR_RETURN;
     }
 
-    increment_nonce(&session.incoming_nonce);
+    /*** INCREMENT NONCE ***/
+    memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
+
+    memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    increment_nonce(&session.incoming_nonce, &old_nonce);
+    increment_nonce(&session.incoming_nonce, &old_nonce);
+    increment_nonce(&session.incoming_nonce, &old_nonce);
+    /***********************/
 
     ret = mit_decrypt(packet, comp_plaintext);
     if (ret != SUCCESS_RETURN) {
@@ -603,6 +667,7 @@ int process_init_session() {
 
     int ret;
     mit_packet_t * packet = (mit_packet_t *) receive_buffer;
+    mit_nonce_t old_nonce = {0};
 
     printf("process_init_session\n");
 
@@ -661,8 +726,29 @@ int process_init_session() {
         return ERROR_RETURN;
     }
 
-    increment_nonce(&session.outgoing_nonce);
-    increment_nonce(&session.incoming_nonce);
+    /*** INCREMENT NONCE ***/
+    memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
+
+    memcpy(old_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    increment_nonce(&session.outgoing_nonce, &old_nonce);
+    increment_nonce(&session.outgoing_nonce, &old_nonce);
+    increment_nonce(&session.outgoing_nonce, &old_nonce);
+    /***********************/
+
+    /*** INCREMENT NONCE ***/
+    memset(old_nonce.rawBytes, 0, sizeof(mit_nonce_t));
+
+    memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(old_nonce.rawBytes, session.incoming_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    increment_nonce(&session.incoming_nonce, &old_nonce);
+    increment_nonce(&session.incoming_nonce, &old_nonce);
+    increment_nonce(&session.incoming_nonce, &old_nonce);
+    /***********************/
 
     send_packet_and_ack(packet);
     return SUCCESS_RETURN;

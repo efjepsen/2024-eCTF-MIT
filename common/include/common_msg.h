@@ -139,6 +139,6 @@ typedef union __attribute__((packed)) {
 } mit_session_t;
 
 /********** FUNCTIONS **********/
-void increment_nonce(mit_nonce_t * nonce);
+void increment_nonce(mit_nonce_t * nonce, mit_nonce_t * old_nonce);
 
 #endif
