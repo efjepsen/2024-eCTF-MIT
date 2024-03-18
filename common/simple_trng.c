@@ -1,6 +1,8 @@
 /**
  * @file "simple_trng.c"
+ * @author MIT TechSec
  * @brief TRNG Interface
+ * @date 2024
  */
 
 #include "simple_trng.h"

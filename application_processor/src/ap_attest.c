@@ -1,6 +1,8 @@
 /**
  * @file ap_attest.c
+ * @author MIT TechSec
  * @brief Attest-related functions for AP
+ * @date 2024
  */
 
 #include "ap_common.h"

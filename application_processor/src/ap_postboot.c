@@ -1,6 +1,8 @@
 /**
  * @file ap_postboot.c
+ * @author MIT TechSec
  * @brief Post-Boot-related functions for AP
+ * @date 2024
  */
 
 #include "ap_common.h"

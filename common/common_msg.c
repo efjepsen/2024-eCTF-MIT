@@ -1,6 +1,8 @@
 /**
  * @file "common_msg.c"
+ * @author MIT TechSec
  * @brief Common messaging needs
+ * @date 2024
  */
 
 #include "common_msg.h"

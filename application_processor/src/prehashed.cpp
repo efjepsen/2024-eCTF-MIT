@@ -1,3 +1,10 @@
+/**
+ * @file prehashed.cpp
+ * @author MIT TechSec
+ * @brief Compile-time hashing of secrets
+ * @date 2024
+ */
+
 #include "sha256_literal.h"
 #include "global_secrets.h"
 #include "ectf_params.h"

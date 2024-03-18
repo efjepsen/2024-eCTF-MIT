@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-# og author: utaha1228
+# Author: utaha1228
+# MIT TechSec
 
 KEY_SIZE = 32
 SALT_SIZE = 32

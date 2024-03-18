@@ -1,6 +1,8 @@
 /**
  * @file ap_list.c
+ * @author MIT TechSec
  * @brief List-related functions for AP
+ * @date 2024
  */
 
 #include "ap_common.h"

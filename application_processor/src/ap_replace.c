@@ -1,6 +1,8 @@
 /**
  * @file ap_replace.c
+ * @author MIT TechSec
  * @brief Replace-related functions for AP
+ * @date 2024
  */
 
 #include "ap_common.h"

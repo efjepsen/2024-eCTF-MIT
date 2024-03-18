@@ -1,6 +1,8 @@
 /**
  * @file "ap_utilities.c"
+ * @author MIT TechSec
  * @brief Misc utilities for AP
+ * @date 2024
  */
 
 #include "ap_common.h"

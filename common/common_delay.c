@@ -1,6 +1,8 @@
 /**
  * @file "common_delay.c"
+ * @author MIT TechSec
  * @brief Common delays
+ * @date 2024
  */
 
 #include "common_delay.h"

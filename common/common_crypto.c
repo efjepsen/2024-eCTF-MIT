@@ -1,6 +1,8 @@
 /**
  * @file "common_crypto.c"
+ * @author MIT TechSec
  * @brief Common crypto needs
+ * @date 2024
  */
 
 #include "common_crypto.h"

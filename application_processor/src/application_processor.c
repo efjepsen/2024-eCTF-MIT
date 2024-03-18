@@ -1,14 +1,8 @@
 /**
  * @file application_processor.c
- * @author Jacob Doll
- * @brief eCTF AP Example Design Implementation
+ * @author MIT TechSec
+ * @brief eCTF AP Implementation
  * @date 2024
- *
- * This source file is part of an example system for MITRE's 2024 Embedded System CTF (eCTF).
- * This code is being provided only for educational purposes for the 2024 MITRE eCTF competition,
- * and may not meet MITRE standards for quality. Use this code at your own risk!
- *
- * @copyright Copyright (c) 2024 The MITRE Corporation
  */
 
 #include "board.h"
@@ -27,9 +21,6 @@
 #include "board_link.h"
 #include "simple_flash.h"
 #include "host_messaging.h"
-#ifdef CRYPTO_EXAMPLE
-#include "simple_crypto.h"
-#endif
 
 #ifdef POST_BOOT
 #include "mxc_delay.h"
