@@ -140,6 +140,54 @@ int __attribute__((optimize("O0"))) validate_packet(mit_opcode_t expected_opcode
     return SUCCESS_RETURN;
 }
 
+// Like above, but we don't check for opcode
+int __attribute__((optimize("O0"))) validate_any_packet(void) {
+    mit_packet_t * rx_packet = (mit_packet_t *) receive_buffer;
+
+    // REDUNDANT
+    if ((rx_packet->ad.comp_id != COMPONENT_ID) ||
+        (rx_packet->ad.comp_id != COMPONENT_ID) ||
+        (rx_packet->ad.comp_id != COMPONENT_ID)) {
+        printf("component_id mismatch\n");
+        return ERROR_RETURN;
+    }
+
+    // REDUNDANT
+    if ((rx_packet->ad.for_ap != false) ||
+        (rx_packet->ad.for_ap != false) ||
+        (rx_packet->ad.for_ap != false)) {
+        printf("for_ap is true\n");
+        return ERROR_RETURN;
+    }
+
+    // REDUNDANT
+    if ((rx_packet->ad.len > MIT_MAX_MSG_LEN) ||
+        (rx_packet->ad.len > MIT_MAX_MSG_LEN) ||
+        (rx_packet->ad.len > MIT_MAX_MSG_LEN)) {
+        printf("len not 0\n");
+        return ERROR_RETURN;
+    }
+
+    // Just check again we have a valid session :)
+    // REDUNDANT
+    if (!valid_session() || !valid_session() || !valid_session()) {
+        return ERROR_RETURN;
+    }
+
+    // Check received nonce matches expected nonce
+    // REDUNDANT
+    if ((mit_ConstantCompare_nonce(rx_packet->ad.nonce.rawBytes, session.incoming_nonce.rawBytes) != 0) ||
+        (mit_ConstantCompare_nonce(rx_packet->ad.nonce.rawBytes, session.incoming_nonce.rawBytes) != 0) ||
+        (mit_ConstantCompare_nonce(rx_packet->ad.nonce.rawBytes, session.incoming_nonce.rawBytes) != 0)) {
+        printf("nonce mismatch\n");
+        printf("packet->ad.nonce.rawBytes: 0x%08x\n", rx_packet->ad.nonce.sequenceNumber);
+        printf("session.incoming_nonce.rawBytes: 0x%08x\n", session.incoming_nonce.sequenceNumber);
+        return ERROR_RETURN;
+    }
+
+    return SUCCESS_RETURN;
+}
+
 void set_ad(mit_packet_t * packet, mit_comp_id_t comp_id, mit_opcode_t opcode, uint8_t len) {
     // TODO limits check on len?
     packet->ad.comp_id = comp_id;
@@ -326,44 +374,38 @@ void boot() {
 }
 
 // Handle a transaction from the AP
-int component_process_cmd() {
-    int ret;
+int __attribute__((optimize("O0"))) component_process_cmd() {
+    int ret = ERROR_RETURN;
     mit_packet_t * packet = (mit_packet_t *) receive_buffer;
 
     // Can't hurt to check, just once more.
-    if (!valid_session()) {
+    // REDUNDANT
+    if (!valid_session() || !valid_session() || !valid_session()) {
         return ERROR_RETURN;
     }
 
     /*************** VALIDATE RECEIVED PACKET ****************/
-    if (packet->ad.comp_id != COMPONENT_ID) {
-        printf("error: rx packet (0x%08x) doesn't match given component id (0x%08x)\n", packet->ad.comp_id, COMPONENT_ID);
+    if ((validate_any_packet() != SUCCESS_RETURN) ||
+        (validate_any_packet() != SUCCESS_RETURN) ||
+        (validate_any_packet() != SUCCESS_RETURN)) {
         return ERROR_RETURN;
     }
 
-    if (packet->ad.for_ap != false) {
-        printf("error: rx packet not tagged for component\n");
-        return ERROR_RETURN;
-    }
-
-    if (packet->ad.len == 0) {
-        printf("error: rx packet has null message length\n");
-        return ERROR_RETURN;
-    }
+    // Clear plaintext buffer
+    // REDUNDANT
+    memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
+    memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
+    memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
 
     // Validate incoming nonce matches expected nonce
-    if (mit_ConstantCompare_nonce(session.incoming_nonce.rawBytes, packet->ad.nonce.rawBytes) == 0) {
-        ret = mit_decrypt(packet, comp_plaintext);
+    ret = mit_decrypt(packet, comp_plaintext);
 
-        if (ret != SUCCESS_RETURN) {
-            printf("error: decryption failed with error code %i\n", ret);
-            memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
-            return ERROR_RETURN;
-        }
-    } else {
-        printf("error: Incoming nonce (seq 0x%08x) doesn't match expected nonce (seq 0x%08x)\n",
-            packet->ad.nonce.sequenceNumber, session.incoming_nonce.sequenceNumber
-        );
+    // REDUNDANT
+    if ((ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN)) {
+        printf("error: decryption failed with error code %i\n", ret);
+        memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
         return ERROR_RETURN;
     }
 
@@ -374,7 +416,7 @@ int component_process_cmd() {
     case MIT_CMD_ATTESTREQ:
         return process_attest();
     default:
-        printf("Error: Unrecognized command received %d\n", packet->ad.opcode);
+        printf("Error: Unrecognized command received\n");
         return ERROR_RETURN;
     }
 }
