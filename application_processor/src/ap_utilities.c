@@ -269,17 +269,25 @@ bool is_valid_component(mit_comp_id_t component_id) {
  * @param len: uint8_t, len of data to copy into message field
  */
 int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * data, uint8_t len) {
-    int ret;
+    int ret = ERROR_RETURN;
 
     // TODO best place for validate_session?
-    ret = validate_session(component_id);
-    if (ret != SUCCESS_RETURN) {
+    // REDUNDANT
+    if ((validate_session(component_id) != SUCCESS_RETURN) ||
+        (validate_session(component_id) != SUCCESS_RETURN) ||
+        (validate_session(component_id) != SUCCESS_RETURN)) {
         print_error("Failed to validate session for component id 0x%08x\n", component_id);
         return ERROR_RETURN;
     }
 
     // TODO bounds check on len?
     mit_packet_t * packet = (mit_packet_t *)transmit_buffer;
+
+    // Clear tx buffer
+    // REDUNDANT
+    memset(packet, 0, sizeof(mit_packet_t));
+    memset(packet, 0, sizeof(mit_packet_t));
+    memset(packet, 0, sizeof(mit_packet_t));
 
     // Set Authenticated Data field
     set_ad(packet, component_id, opcode, len);
@@ -294,7 +302,7 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
         return ERROR_RETURN;
     }
 
-    // if the nonce is 0, generate a random nonce
+    // if the nonce is 0, abort
     if ((mit_ConstantCompare_nonce(session->outgoing_nonce.rawBytes, null_nonce) == 0) ||
         (mit_ConstantCompare_nonce(session->outgoing_nonce.rawBytes, null_nonce) == 0) ||
         (mit_ConstantCompare_nonce(session->outgoing_nonce.rawBytes, null_nonce) == 0)) {
@@ -304,6 +312,15 @@ int make_mit_packet(mit_comp_id_t component_id, mit_opcode_t opcode, uint8_t * d
     memcpy(packet->ad.nonce.rawBytes, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(packet->ad.nonce.rawBytes, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(packet->ad.nonce.rawBytes, session->outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+
+    // Confirm we actually copied
+    // REDUNDANT
+    if ((mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, session->outgoing_nonce.rawBytes) != 0) ||
+        (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, session->outgoing_nonce.rawBytes) != 0) ||
+        (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, session->outgoing_nonce.rawBytes) != 0)) {
+        printf("error: Failed to copy nonce!\n");
+        return ERROR_RETURN;
+    }
 
     /****************************/
 
