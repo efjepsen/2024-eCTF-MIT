@@ -473,8 +473,8 @@ int __attribute__((optimize("O0"))) component_process_cmd() {
     return ret;
 }
 
-int process_boot() {
-    int ret;
+int __attribute__((optimize("O0"))) process_boot() {
+    int ret = ERROR_RETURN;
     uint8_t len;
     mit_challenge_t r1, r2;
     mit_message_t * message = (mit_message_t *)comp_plaintext;
@@ -483,14 +483,19 @@ int process_boot() {
     mit_packet_t * packet = (mit_packet_t *) receive_buffer;
 
     // Step 0: validate packet again :-)
-    ret = validate_packet(MIT_CMD_BOOTREQ);
-    if (ret != SUCCESS_RETURN) {
+    // REDUNDANT
+    if ((validate_packet(MIT_CMD_BOOTREQ) != SUCCESS_RETURN) ||
+        (validate_packet(MIT_CMD_BOOTREQ) != SUCCESS_RETURN) ||
+        (validate_packet(MIT_CMD_BOOTREQ) != SUCCESS_RETURN)) {
         printf("validation failed\n");
         return ERROR_RETURN;
     }
 
     ret = mit_decrypt(packet, comp_plaintext);
-    if (ret != SUCCESS_RETURN) {
+    // REDUNDANT
+    if ((ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN)) {
         printf("decryption failed\n");
         return ERROR_RETURN;
     }
@@ -513,14 +518,23 @@ int process_boot() {
     /***********************/
 
     // Step 1: Generate random challenge r2
+    // REDUNDANT
+    get_random_challenge(&r2);
+    get_random_challenge(&r2);
     get_random_challenge(&r2);
 
     // Step 2: Store r2 in response packet
+    // REDUNDANT
+    memcpy(message->bootReq.r2.rawBytes, r2.rawBytes, sizeof(mit_challenge_t));
+    memcpy(message->bootReq.r2.rawBytes, r2.rawBytes, sizeof(mit_challenge_t));
     memcpy(message->bootReq.r2.rawBytes, r2.rawBytes, sizeof(mit_challenge_t));
 
     // Step 3: Send response packet
     ret = make_mit_packet(COMPONENT_ID, MIT_CMD_BOOTREQ, message->bootReq.rawBytes, sizeof(mit_message_bootreq_t));
-    if (ret != SUCCESS_RETURN) {
+    // REDUNDANT
+    if ((ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN)) {
         return ret;
     }
 
@@ -533,13 +547,20 @@ int process_boot() {
     }
 
     // Step 5: Validate packet
-    ret = validate_packet(MIT_CMD_BOOT);
-    if (ret != SUCCESS_RETURN) {
+    // REDUNDANT
+    if ((validate_packet(MIT_CMD_BOOT) != SUCCESS_RETURN) ||
+        (validate_packet(MIT_CMD_BOOT) != SUCCESS_RETURN) ||
+        (validate_packet(MIT_CMD_BOOT) != SUCCESS_RETURN)) {
+        printf("validation failed\n");
         return ERROR_RETURN;
     }
 
     ret = mit_decrypt(packet, comp_plaintext);
-    if (ret != SUCCESS_RETURN) {
+    // REDUNDANT
+    if ((ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN)) {
+        printf("decryption failed\n");
         return ERROR_RETURN;
     }
 
@@ -561,7 +582,10 @@ int process_boot() {
     /***********************/
 
     // Step 6: Validate r2 in attest response
-    if (mit_ConstantCompare_challenge(message->boot.r2.rawBytes, r2.rawBytes) != 0) {
+    // REDUNDANT
+    if ((mit_ConstantCompare_challenge(message->boot.r2.rawBytes, r2.rawBytes) != 0) ||
+        (mit_ConstantCompare_challenge(message->boot.r2.rawBytes, r2.rawBytes) != 0) ||
+        (mit_ConstantCompare_challenge(message->boot.r2.rawBytes, r2.rawBytes) != 0)) {
         return ERROR_RETURN;
     }
 
@@ -582,18 +606,31 @@ int process_boot() {
     return ERROR_RETURN;
 }
 
-int process_attest() {
-    int ret;
+int __attribute__((optimize("O0"))) process_attest() {
+    int ret = ERROR_RETURN;
     uint8_t len;
     mit_challenge_t r1, r2;
+    mit_message_attest_t * attest = (mit_message_attest_t *)comp_plaintext;
+    mit_message_attestreq_t * attestReq = (mit_message_attestreq_t *)comp_plaintext;
     mit_nonce_t old_nonce = {0};
 
     mit_packet_t * packet = (mit_packet_t *) receive_buffer;
 
     // Step 0: validate packet again :-)
-    ret = validate_packet(MIT_CMD_ATTESTREQ);
-    if (ret != SUCCESS_RETURN) {
+    // REDUNDANT
+    if ((validate_packet(MIT_CMD_ATTESTREQ) != SUCCESS_RETURN) ||
+        (validate_packet(MIT_CMD_ATTESTREQ) != SUCCESS_RETURN) ||
+        (validate_packet(MIT_CMD_ATTESTREQ) != SUCCESS_RETURN)) {
         printf("validation failed\n");
+        return ERROR_RETURN;
+    }
+
+    ret = mit_decrypt(packet, comp_plaintext);
+    // REDUNDANT
+    if ((ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN)) {
+        printf("decryption failed\n");
         return ERROR_RETURN;
     }
 
@@ -614,22 +651,23 @@ int process_attest() {
     increment_nonce(&session.incoming_nonce, &old_nonce);
     /***********************/
 
-    ret = mit_decrypt(packet, comp_plaintext);
-    if (ret != SUCCESS_RETURN) {
-        printf("decryption failed\n");
-        return ERROR_RETURN;
-    }
-
     // Step 1: Generate random challenge r2
+    // REDUNDANT
+    get_random_challenge(&r2);
+    get_random_challenge(&r2);
     get_random_challenge(&r2);
 
     // Step 2: Store r2 in response packet
-    mit_message_attestreq_t * attestReq = (mit_message_attestreq_t *)comp_plaintext;
+    // REDUNDANT
+    memcpy(attestReq->r2.rawBytes, r2.rawBytes, sizeof(mit_challenge_t));
+    memcpy(attestReq->r2.rawBytes, r2.rawBytes, sizeof(mit_challenge_t));
     memcpy(attestReq->r2.rawBytes, r2.rawBytes, sizeof(mit_challenge_t));
 
     // Step 3: Send response packet
     ret = make_mit_packet(COMPONENT_ID, MIT_CMD_ATTESTREQ, attestReq->rawBytes, sizeof(mit_message_attestreq_t));
-    if (ret != SUCCESS_RETURN) {
+    if ((ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN)) {
         return ret;
     }
 
@@ -642,8 +680,20 @@ int process_attest() {
     }
 
     // Step 5: Validate packet
-    ret = validate_packet(MIT_CMD_ATTEST);
-    if (ret != SUCCESS_RETURN) {
+    // REDUNDANT
+    if ((validate_packet(MIT_CMD_ATTEST) != SUCCESS_RETURN) ||
+        (validate_packet(MIT_CMD_ATTEST) != SUCCESS_RETURN) ||
+        (validate_packet(MIT_CMD_ATTEST) != SUCCESS_RETURN)) {
+        printf("validation failed\n");
+        return ERROR_RETURN;
+    }
+
+    ret = mit_decrypt(packet, comp_plaintext);
+    // REDUNDANT
+    if ((ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN)) {
+        printf("decryption failed\n");
         return ERROR_RETURN;
     }
 
@@ -664,14 +714,11 @@ int process_attest() {
     increment_nonce(&session.incoming_nonce, &old_nonce);
     /***********************/
 
-    ret = mit_decrypt(packet, comp_plaintext);
-    if (ret != SUCCESS_RETURN) {
-        return ERROR_RETURN;
-    }
-
     // Step 6: Validate r2 in attest response
-    mit_message_attest_t * attest = (mit_message_attest_t *)comp_plaintext;
-    if (mit_ConstantCompare_challenge(attest->r2.rawBytes, r2.rawBytes) != 0) {
+    // REDUNDANT
+    if ((mit_ConstantCompare_challenge(attest->r2.rawBytes, r2.rawBytes) != 0) ||
+        (mit_ConstantCompare_challenge(attest->r2.rawBytes, r2.rawBytes) != 0) ||
+        (mit_ConstantCompare_challenge(attest->r2.rawBytes, r2.rawBytes) != 0)) {
         return ERROR_RETURN;
     }
 
@@ -690,60 +737,76 @@ int process_attest() {
     return SUCCESS_RETURN;
 }
 
-int process_init_session() {
+int __attribute__((optimize("O0"))) process_init_session() {
     // Just double-check :)
     if (valid_session()) {
         return ERROR_RETURN;
     }
 
-    int ret;
+    int ret = ERROR_RETURN;
     mit_packet_t * packet = (mit_packet_t *) receive_buffer;
     mit_nonce_t old_nonce = {0};
 
     printf("process_init_session\n");
 
     /*************** VALIDATE RECEIVED PACKET ****************/
-    if (packet->ad.comp_id != COMPONENT_ID) {
+
+    if ((packet->ad.comp_id != COMPONENT_ID) ||
+        (packet->ad.comp_id != COMPONENT_ID) ||
+        (packet->ad.comp_id != COMPONENT_ID)) {
         printf("error: rx packet (0x%08x) doesn't match given component id (0x%08x)\n", packet->ad.comp_id, COMPONENT_ID);
         return ERROR_RETURN;
     }
 
-    // TODO use ifdefs for this section
-    if (packet->ad.for_ap != false) {
+    if ((packet->ad.for_ap != false) ||
+        (packet->ad.for_ap != false) ||
+        (packet->ad.for_ap != false)) {
         printf("error: rx packet not tagged for component\n");
         return ERROR_RETURN;
     }
 
-    if (packet->ad.len != sizeof(mit_message_init_t)) {
+    if ((packet->ad.len != sizeof(mit_message_init_t)) ||
+        (packet->ad.len != sizeof(mit_message_init_t)) ||
+        (packet->ad.len != sizeof(mit_message_init_t))) {
         printf("error: rx packet has incorrect message length\n");
         return ERROR_RETURN;
     }
 
-    if (packet->ad.opcode != MIT_CMD_INIT) {
+    if ((packet->ad.opcode != MIT_CMD_INIT) ||
+        (packet->ad.opcode != MIT_CMD_INIT) ||
+        (packet->ad.opcode != MIT_CMD_INIT)) {
         printf("error: rx packet has non-init opcode\n");
         return ERROR_RETURN;
     }
 
     // Validate authTag field
     ret = mit_decrypt(packet, comp_plaintext);
-    if (ret != SUCCESS_RETURN) {
+    if ((ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN)) {
         printf("error: decryption failed with error code %i\n", ret);
         memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
         return ERROR_RETURN;
     }
 
+    // If packet's nonce, and the message's ap_nonce don't match, ignore.
     mit_message_init_t * received = (mit_message_init_t *)comp_plaintext;
-    if (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, received->ap_nonce.rawBytes) != 0) {
-        // If packet's nonce, and the message's ap_nonce don't match, ignore.
+    if ((mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, received->ap_nonce.rawBytes) != 0) ||
+        (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, received->ap_nonce.rawBytes) != 0) ||
+        (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, received->ap_nonce.rawBytes) != 0)) {
         return ERROR_RETURN;
     }
 
     // Save incoming nonce
     memcpy(session.incoming_nonce.rawBytes, received->ap_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(session.incoming_nonce.rawBytes, received->ap_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(session.incoming_nonce.rawBytes, received->ap_nonce.rawBytes, sizeof(mit_nonce_t));
 
     /***** Send init response back *****/
     // Copy our nonce into response message
     mit_message_init_t * outgoing = (mit_message_init_t *)comp_plaintext;
+    memcpy(outgoing->component_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
+    memcpy(outgoing->component_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
     memcpy(outgoing->component_nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
 
     packet = (mit_packet_t *)transmit_buffer;
@@ -751,7 +814,9 @@ int process_init_session() {
     memcpy(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes, sizeof(mit_nonce_t));
 
     ret = mit_encrypt(packet, comp_plaintext, sizeof(mit_message_init_t));
-    if (ret != SUCCESS_RETURN) {
+    if ((ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN) ||
+        (ret != SUCCESS_RETURN)) {
         printf("encryption failed with error code %i\n", ret);
         memset(packet, 0, sizeof(mit_packet_t));
         return ERROR_RETURN;
