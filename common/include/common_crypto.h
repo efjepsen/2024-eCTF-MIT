@@ -8,9 +8,11 @@
 
 #include "global_secrets.h"
 #include "common_msg.h"
+#include "simple_trng.h"
 
 #include <wolfssl/wolfcrypt/chacha20_poly1305.h>
 #include <wolfssl/wolfcrypt/sha256.h>
+#include <wolfssl/wolfcrypt/hash.h>
 
 #define MIT_HASH_SIZE SHA256_DIGEST_SIZE
 
