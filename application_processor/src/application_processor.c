@@ -68,7 +68,7 @@ void init() {
     session_init();
     
     // Initialize board link interface
-    board_link_init();
+    board_link_init_ap();
 }
 
 /*********************************** MAIN *************************************/

@@ -28,7 +28,7 @@
  * 
  * Initiailize the underlying i2c simple interface
 */
-void board_link_init(void);
+void board_link_init_ap(void);
 
 /**
  * @brief Convert 4-byte component ID to I2C address
