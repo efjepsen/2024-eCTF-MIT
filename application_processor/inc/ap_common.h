@@ -23,6 +23,7 @@ extern uint8_t ap_plaintext[AP_PLAINTEXT_LEN];
 
 // Common AP+Component headers
 #include "common_crypto.h"
+#include "common_delay.h"
 #include "common_init.h"
 #include "common_msg.h"
 #include "simple_trng.h"

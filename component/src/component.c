@@ -30,6 +30,7 @@
 
 // MIT: Includes for our custom features
 #include "common_crypto.h"
+#include "common_delay.h"
 #include "common_init.h"
 #include "common_msg.h"
 #include "simple_trng.h"
