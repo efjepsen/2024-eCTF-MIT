@@ -13,7 +13,6 @@ void __attribute__((optimize("O0"))) simple_trng_init(void) {
 
     // REDUNDANT
     if ((ret != 0) || (ret != 0) || (ret != 0)) {
-        printf("simple_trng_init failed with errcode %i\n", ret);
         while (1) { ; }
     }
 }

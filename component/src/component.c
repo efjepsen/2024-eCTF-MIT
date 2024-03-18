@@ -93,7 +93,6 @@ int __attribute__((optimize("O0"))) validate_packet(mit_opcode_t expected_opcode
     if ((rx_packet->ad.comp_id != COMPONENT_ID) ||
         (rx_packet->ad.comp_id != COMPONENT_ID) ||
         (rx_packet->ad.comp_id != COMPONENT_ID)) {
-        printf("component_id mismatch\n");
         return ERROR_RETURN;
     }
 
@@ -101,7 +100,6 @@ int __attribute__((optimize("O0"))) validate_packet(mit_opcode_t expected_opcode
     if ((rx_packet->ad.for_ap != false) ||
         (rx_packet->ad.for_ap != false) ||
         (rx_packet->ad.for_ap != false)) {
-        printf("for_ap is true\n");
         return ERROR_RETURN;
     }
 
@@ -109,7 +107,6 @@ int __attribute__((optimize("O0"))) validate_packet(mit_opcode_t expected_opcode
     if ((rx_packet->ad.len > MIT_MAX_MSG_LEN) ||
         (rx_packet->ad.len > MIT_MAX_MSG_LEN) ||
         (rx_packet->ad.len > MIT_MAX_MSG_LEN)) {
-        printf("len not 0\n");
         return ERROR_RETURN;
     }
 
@@ -117,7 +114,6 @@ int __attribute__((optimize("O0"))) validate_packet(mit_opcode_t expected_opcode
     if ((rx_packet->ad.opcode != expected_opcode) ||
         (rx_packet->ad.opcode != expected_opcode) ||
         (rx_packet->ad.opcode != expected_opcode)) {
-        printf("opcode mismatch\n");
         return ERROR_RETURN;
     }
 
@@ -132,9 +128,6 @@ int __attribute__((optimize("O0"))) validate_packet(mit_opcode_t expected_opcode
     if ((mit_ConstantCompare_nonce(rx_packet->ad.nonce.rawBytes, session.incoming_nonce.rawBytes) != 0) ||
         (mit_ConstantCompare_nonce(rx_packet->ad.nonce.rawBytes, session.incoming_nonce.rawBytes) != 0) ||
         (mit_ConstantCompare_nonce(rx_packet->ad.nonce.rawBytes, session.incoming_nonce.rawBytes) != 0)) {
-        printf("nonce mismatch\n");
-        printf("packet->ad.nonce.rawBytes: 0x%08x\n", rx_packet->ad.nonce.sequenceNumber);
-        printf("session.incoming_nonce.rawBytes: 0x%08x\n", session.incoming_nonce.sequenceNumber);
         return ERROR_RETURN;
     }
 
@@ -149,7 +142,6 @@ int __attribute__((optimize("O0"))) validate_any_packet(void) {
     if ((rx_packet->ad.comp_id != COMPONENT_ID) ||
         (rx_packet->ad.comp_id != COMPONENT_ID) ||
         (rx_packet->ad.comp_id != COMPONENT_ID)) {
-        printf("component_id mismatch\n");
         return ERROR_RETURN;
     }
 
@@ -157,7 +149,6 @@ int __attribute__((optimize("O0"))) validate_any_packet(void) {
     if ((rx_packet->ad.for_ap != false) ||
         (rx_packet->ad.for_ap != false) ||
         (rx_packet->ad.for_ap != false)) {
-        printf("for_ap is true\n");
         return ERROR_RETURN;
     }
 
@@ -165,7 +156,6 @@ int __attribute__((optimize("O0"))) validate_any_packet(void) {
     if ((rx_packet->ad.len > MIT_MAX_MSG_LEN) ||
         (rx_packet->ad.len > MIT_MAX_MSG_LEN) ||
         (rx_packet->ad.len > MIT_MAX_MSG_LEN)) {
-        printf("len not 0\n");
         return ERROR_RETURN;
     }
 
@@ -180,9 +170,6 @@ int __attribute__((optimize("O0"))) validate_any_packet(void) {
     if ((mit_ConstantCompare_nonce(rx_packet->ad.nonce.rawBytes, session.incoming_nonce.rawBytes) != 0) ||
         (mit_ConstantCompare_nonce(rx_packet->ad.nonce.rawBytes, session.incoming_nonce.rawBytes) != 0) ||
         (mit_ConstantCompare_nonce(rx_packet->ad.nonce.rawBytes, session.incoming_nonce.rawBytes) != 0)) {
-        printf("nonce mismatch\n");
-        printf("packet->ad.nonce.rawBytes: 0x%08x\n", rx_packet->ad.nonce.sequenceNumber);
-        printf("session.incoming_nonce.rawBytes: 0x%08x\n", session.incoming_nonce.sequenceNumber);
         return ERROR_RETURN;
     }
 
@@ -190,7 +177,6 @@ int __attribute__((optimize("O0"))) validate_any_packet(void) {
 }
 
 void set_ad(mit_packet_t * packet, mit_comp_id_t comp_id, mit_opcode_t opcode, uint8_t len) {
-    // TODO limits check on len?
     packet->ad.comp_id = comp_id;
     packet->ad.opcode = opcode;
     packet->ad.len = len;
@@ -209,7 +195,6 @@ int __attribute__((optimize("O0"))) make_mit_packet(mit_comp_id_t component_id, 
     int ret = ERROR_RETURN;
     mit_nonce_t old_nonce = {0};
 
-    // TODO bounds check on len?
     mit_packet_t * packet = (mit_packet_t *)transmit_buffer;
 
     // Clear tx buffer
@@ -222,8 +207,6 @@ int __attribute__((optimize("O0"))) make_mit_packet(mit_comp_id_t component_id, 
     set_ad(packet, component_id, opcode, len);
 
     /***** NONCE GENERATION/LOOKUP *****/
-
-    // WARNING reusing a nonce is the worst thing you can possibly do.
 
     // if the nonce is 0, abort
     if ((mit_ConstantCompare_nonce(session.outgoing_nonce.rawBytes, null_nonce) == 0) ||
@@ -242,7 +225,6 @@ int __attribute__((optimize("O0"))) make_mit_packet(mit_comp_id_t component_id, 
     if ((mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes) != 0) ||
         (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes) != 0) ||
         (mit_ConstantCompare_nonce(packet->ad.nonce.rawBytes, session.outgoing_nonce.rawBytes) != 0)) {
-        printf("error: Failed to copy nonce!\n");
         return ERROR_RETURN;
     }
 
@@ -253,7 +235,6 @@ int __attribute__((optimize("O0"))) make_mit_packet(mit_comp_id_t component_id, 
     if ((ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN)) {
-        printf("error: encryption failed with error code %i\n", ret);
         memset(packet, 0, sizeof(mit_packet_t));
         return ERROR_RETURN;
     }
@@ -325,7 +306,6 @@ int __attribute__((optimize("O0"))) secure_receive(uint8_t* buffer) {
     if ((validate_packet(MIT_CMD_POSTBOOT) != SUCCESS_RETURN) ||
         (validate_packet(MIT_CMD_POSTBOOT) != SUCCESS_RETURN) ||
         (validate_packet(MIT_CMD_POSTBOOT) != SUCCESS_RETURN)) {
-        printf("validation failed\n");
         return ERROR_RETURN;
     }
 
@@ -334,7 +314,6 @@ int __attribute__((optimize("O0"))) secure_receive(uint8_t* buffer) {
     if ((ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN)) {
-        printf("decryption failed\n");
         return ERROR_RETURN;
     }
 
@@ -426,7 +405,6 @@ int __attribute__((optimize("O0"))) component_process_cmd() {
     if ((ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN)) {
-        printf("error: decryption failed with error code %i\n", ret);
         memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
         return ERROR_RETURN;
     }
@@ -476,7 +454,6 @@ int __attribute__((optimize("O0"))) process_boot() {
     if ((validate_packet(MIT_CMD_BOOTREQ) != SUCCESS_RETURN) ||
         (validate_packet(MIT_CMD_BOOTREQ) != SUCCESS_RETURN) ||
         (validate_packet(MIT_CMD_BOOTREQ) != SUCCESS_RETURN)) {
-        printf("validation failed\n");
         return ERROR_RETURN;
     }
 
@@ -485,7 +462,6 @@ int __attribute__((optimize("O0"))) process_boot() {
     if ((ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN)) {
-        printf("decryption failed\n");
         return ERROR_RETURN;
     }
 
@@ -540,7 +516,6 @@ int __attribute__((optimize("O0"))) process_boot() {
     if ((validate_packet(MIT_CMD_BOOT) != SUCCESS_RETURN) ||
         (validate_packet(MIT_CMD_BOOT) != SUCCESS_RETURN) ||
         (validate_packet(MIT_CMD_BOOT) != SUCCESS_RETURN)) {
-        printf("validation failed\n");
         return ERROR_RETURN;
     }
 
@@ -549,7 +524,6 @@ int __attribute__((optimize("O0"))) process_boot() {
     if ((ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN)) {
-        printf("decryption failed\n");
         return ERROR_RETURN;
     }
 
@@ -610,7 +584,6 @@ int __attribute__((optimize("O0"))) process_attest() {
     if ((validate_packet(MIT_CMD_ATTESTREQ) != SUCCESS_RETURN) ||
         (validate_packet(MIT_CMD_ATTESTREQ) != SUCCESS_RETURN) ||
         (validate_packet(MIT_CMD_ATTESTREQ) != SUCCESS_RETURN)) {
-        printf("validation failed\n");
         return ERROR_RETURN;
     }
 
@@ -619,7 +592,6 @@ int __attribute__((optimize("O0"))) process_attest() {
     if ((ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN)) {
-        printf("decryption failed\n");
         return ERROR_RETURN;
     }
 
@@ -673,7 +645,6 @@ int __attribute__((optimize("O0"))) process_attest() {
     if ((validate_packet(MIT_CMD_ATTEST) != SUCCESS_RETURN) ||
         (validate_packet(MIT_CMD_ATTEST) != SUCCESS_RETURN) ||
         (validate_packet(MIT_CMD_ATTEST) != SUCCESS_RETURN)) {
-        printf("validation failed\n");
         return ERROR_RETURN;
     }
 
@@ -682,7 +653,6 @@ int __attribute__((optimize("O0"))) process_attest() {
     if ((ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN)) {
-        printf("decryption failed\n");
         return ERROR_RETURN;
     }
 
@@ -736,35 +706,30 @@ int __attribute__((optimize("O0"))) process_init_session() {
     mit_packet_t * packet = (mit_packet_t *) receive_buffer;
     mit_nonce_t old_nonce = {0};
 
-    printf("process_init_session\n");
 
     /*************** VALIDATE RECEIVED PACKET ****************/
 
     if ((packet->ad.comp_id != COMPONENT_ID) ||
         (packet->ad.comp_id != COMPONENT_ID) ||
         (packet->ad.comp_id != COMPONENT_ID)) {
-        printf("error: rx packet (0x%08x) doesn't match given component id (0x%08x)\n", packet->ad.comp_id, COMPONENT_ID);
         return ERROR_RETURN;
     }
 
     if ((packet->ad.for_ap != false) ||
         (packet->ad.for_ap != false) ||
         (packet->ad.for_ap != false)) {
-        printf("error: rx packet not tagged for component\n");
         return ERROR_RETURN;
     }
 
     if ((packet->ad.len != sizeof(mit_message_init_t)) ||
         (packet->ad.len != sizeof(mit_message_init_t)) ||
         (packet->ad.len != sizeof(mit_message_init_t))) {
-        printf("error: rx packet has incorrect message length\n");
         return ERROR_RETURN;
     }
 
     if ((packet->ad.opcode != MIT_CMD_INIT) ||
         (packet->ad.opcode != MIT_CMD_INIT) ||
         (packet->ad.opcode != MIT_CMD_INIT)) {
-        printf("error: rx packet has non-init opcode\n");
         return ERROR_RETURN;
     }
 
@@ -773,7 +738,6 @@ int __attribute__((optimize("O0"))) process_init_session() {
     if ((ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN)) {
-        printf("error: decryption failed with error code %i\n", ret);
         memset(comp_plaintext, 0, COMP_PLAINTEXT_LEN);
         return ERROR_RETURN;
     }
@@ -806,7 +770,6 @@ int __attribute__((optimize("O0"))) process_init_session() {
     if ((ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN) ||
         (ret != SUCCESS_RETURN)) {
-        printf("encryption failed with error code %i\n", ret);
         memset(packet, 0, sizeof(mit_packet_t));
         return ERROR_RETURN;
     }

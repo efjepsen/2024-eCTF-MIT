@@ -48,7 +48,6 @@ i2c_addr_t component_id_to_i2c_addr(uint32_t component_id) {
  * send a packet to the AP and wait for the message to be received
 */
 void send_packet_and_ack(mit_packet_t * packet) {
-    // TODO gross len calculation
     uint8_t len = sizeof(mit_ad_t) + sizeof(mit_authtag_t) + packet->ad.len;
     I2C_REGS[TRANSMIT_LEN][0] = len;
     memcpy((void*)I2C_REGS[TRANSMIT], (void*)packet, len);

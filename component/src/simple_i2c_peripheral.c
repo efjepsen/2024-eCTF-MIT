@@ -61,7 +61,7 @@ int i2c_simple_peripheral_init(uint8_t addr) {
     // Initialize the I2C Interface
     error = MXC_I2C_Init(I2C_INTERFACE, false, addr);
     if (error != E_NO_ERROR) {
-        printf("Failed to initialize I2C.\n");
+        while (1) { ; }
         return error;
     }
     

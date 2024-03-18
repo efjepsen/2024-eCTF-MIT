@@ -25,7 +25,6 @@ void get_random_challenge(mit_challenge_t * challenge) {
 int mit_sha256(const uint8_t * input, uint8_t len, mit_hash_t * hash) {
     int ret = wc_Sha256Hash(input, len, hash);
     if (ret != 0) {
-        printf("error: mit_sha256 failed with errcode %i\n", ret);
         memset(hash, 0, MIT_HASH_SIZE);
         return ret;
     }
