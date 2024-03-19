@@ -34,6 +34,7 @@ void flash_first_boot(void) {
         flash_simple_erase_page(FLASH_ADDR);
 
         flash_status.flash_magic = FLASH_MAGIC;
+        flash_status.timeout = 0;
         flash_status.component_cnt = COMPONENT_CNT;
         uint32_t component_ids[COMPONENT_CNT] = {COMPONENT_IDS};
         memcpy(flash_status.component_ids, component_ids, 
@@ -47,6 +48,23 @@ void flash_first_boot(void) {
 void rewrite_flash_entry(void) {
     flash_simple_erase_page(FLASH_ADDR);
     flash_simple_write(FLASH_ADDR, (uint32_t*)&flash_status, sizeof(flash_entry));
+}
+
+// Fetch status of timeout, which persists across reboots in case of bad Attestation PIN guesses
+bool get_attest_timeout(void) {
+    return flash_status.timeout != 0;
+}
+
+// Clear the timeout status
+void unset_attest_timeout(void) {
+    flash_status.timeout = 0;
+    rewrite_flash_entry();
+}
+
+// Enable timeouts on future Attestation PIN guesses
+void set_attest_timeout(void) {
+    flash_status.timeout = 1;
+    rewrite_flash_entry();
 }
 
 // Return component_id stored in slot `id`

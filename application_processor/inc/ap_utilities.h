@@ -15,6 +15,7 @@
 // Datatype for information stored in flash
 typedef struct {
     uint32_t flash_magic;
+    uint32_t timeout;
     uint32_t component_cnt;
     uint32_t component_ids[32];
 } flash_entry;
@@ -37,6 +38,15 @@ void flash_first_boot(void);
 
 // Rewrite our provisioned component info into flash
 void rewrite_flash_entry(void);
+
+// Fetch status of timeout, which persists across reboots in case of bad Attestation PIN guesses
+bool get_attest_timeout(void);
+
+// Clear the timeout status
+void unset_attest_timeout(void);
+
+// Enable timeouts on future Attestation PIN guesses
+void set_attest_timeout(void);
 
 // Validate packet in the receive buffer
 int validate_rx_packet(mit_comp_id_t component_id, mit_opcode_t expected_opcode);

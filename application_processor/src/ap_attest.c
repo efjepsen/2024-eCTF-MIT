@@ -31,15 +31,29 @@ int attempt_attest() {
 
     delay_rnd;
 
+    bool timeout = get_attest_timeout();
+
+    // If we've guessed wrong before, add delay to prevent brute-force.
+    if (timeout) {
+        delay_4s;
+    }
+
     // REDUNDANT
     if (compare_pin(pin_buf) || compare_pin(pin_buf) || compare_pin(pin_buf)) {
-        delay_4s;
+        if (!timeout) {
+            set_attest_timeout();
+        }
         print_error("Invalid PIN!\n");
         return ERROR_RETURN;
     }
 
     delay_1s;
     print_debug("Pin Accepted!\n");
+
+    // Reset timeout status
+    if (timeout) {
+        unset_attest_timeout();
+    }
 
     uint32_t component_id;
     recv_input("Component ID: ", 10); // 0x + 8 chars
