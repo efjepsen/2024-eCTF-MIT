@@ -18,6 +18,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// Constants
+#define UART_MAX_LEN 100
+
 // Macro definitions to print the specified format for error messages
 #define print_error(...) printf("%%error: "); printf(__VA_ARGS__); printf("%%"); fflush(stdout)
 #define print_hex_error(...) printf("%%error: "); print_hex(__VA_ARGS__); printf("%%"); fflush(stdout)
@@ -37,8 +40,11 @@
 // Macro definitions to print the specified format for ack messages
 #define print_ack() printf("%%ack%%\n"); fflush(stdout)
 
+// Get pointer to uart buffer
+char * get_uart_buf(void);
+
 // Print a message through USB UART and then receive a line over USB UART
-void recv_input(const char *msg, char *buf);
+void recv_input(const char *msg, uint8_t max);
 
 // Prints a buffer of bytes as a hex string
 void print_hex(uint8_t *buf, size_t len);

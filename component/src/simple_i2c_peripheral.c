@@ -61,7 +61,7 @@ int i2c_simple_peripheral_init(uint8_t addr) {
     // Initialize the I2C Interface
     error = MXC_I2C_Init(I2C_INTERFACE, false, addr);
     if (error != E_NO_ERROR) {
-        printf("Failed to initialize I2C.\n");
+        while (1) { ; }
         return error;
     }
     
@@ -110,10 +110,16 @@ void i2c_simple_isr (void) {
         }
         if (ACTIVE_REG <= MAX_REG) {
             int available = MXC_I2C_GetRXFIFOAvailable(I2C_INTERFACE);
-            if (available < (I2C_REGS_LEN[ACTIVE_REG]-WRITE_INDEX)) {
+            if (available <= 0) {
+                // Continue if error or nothing available.
+                ;
+            }
+            else if (available < (I2C_REGS_LEN[ACTIVE_REG]-WRITE_INDEX)) {
                 WRITE_INDEX += MXC_I2C_ReadRXFIFO(I2C_INTERFACE,
                     &I2C_REGS[ACTIVE_REG][WRITE_INDEX],
-                    MXC_I2C_GetRXFIFOAvailable(I2C_INTERFACE));
+                    // Possible race condition? don't re-fetch num available bytes
+                    // MXC_I2C_GetRXFIFOAvailable(I2C_INTERFACE));
+                    available);
             }
             else {
                 WRITE_INDEX += MXC_I2C_ReadRXFIFO(I2C_INTERFACE,
@@ -154,10 +160,19 @@ void i2c_simple_isr (void) {
         // 2 bytes in TX fifo triggers threshold by default
         // 8 byte FIFO length by default
         // More data is needed within the FIFO
+        // COND_WRAPPER
         if (ACTIVE_REG <= MAX_REG) {
+            // Ensure READ_INDEX is not greater than LEN of register we are
+            // writing from, which could cause a great deal more data to be
+            // written than intended.
+            // COND_WRAPPER
+            if (READ_INDEX > I2C_REGS_LEN[ACTIVE_REG] - 1) {
+                READ_INDEX = I2C_REGS_LEN[ACTIVE_REG] - 1;
+            }
             READ_INDEX += MXC_I2C_WriteTXFIFO(I2C_INTERFACE,
                 (volatile unsigned char*)&I2C_REGS[ACTIVE_REG][READ_INDEX],
                 I2C_REGS_LEN[ACTIVE_REG]-READ_INDEX);
+            // ???
             if (I2C_REGS_LEN[ACTIVE_REG]-1 == READ_INDEX) {
                 MXC_I2C_DisableInt(I2C_INTERFACE, MXC_F_I2C_INTEN0_TX_THD, 0);
             }
@@ -211,10 +226,16 @@ void i2c_simple_isr (void) {
         // Read remaining data
         if (ACTIVE_REG <= MAX_REG) {
             int available = MXC_I2C_GetRXFIFOAvailable(I2C_INTERFACE);
-            if (available < (I2C_REGS_LEN[ACTIVE_REG]-WRITE_INDEX)) {
+            if (available <= 0) {
+                // Continue if error or nothing available.
+                ;
+            }
+            else if (available < (I2C_REGS_LEN[ACTIVE_REG]-WRITE_INDEX)) {
                 WRITE_INDEX += MXC_I2C_ReadRXFIFO(I2C_INTERFACE,
                     &I2C_REGS[ACTIVE_REG][WRITE_INDEX],
-                    MXC_I2C_GetRXFIFOAvailable(I2C_INTERFACE));
+                    // Possible race condition? don't re-fetch num available bytes
+                    // MXC_I2C_GetRXFIFOAvailable(I2C_INTERFACE));
+                    available);
             }
             else {
                 WRITE_INDEX += MXC_I2C_ReadRXFIFO(I2C_INTERFACE,

@@ -33,10 +33,32 @@ pkgs.mkShell {
     url = "https://github.com/Analog-Devices-MSDK/msdk.git";
     ref = "refs/tags/v2023_06";
   };
+
+  sha256_literal = builtins.fetchGit {
+    url = "https://github.com/aguinet/sha256_literal.git";
+    rev = "d7017a7b4bbc30bc93fb8bd4cf54555986d25ef0";
+  };
+
+  ## MIT configs ##
+
+  wolfssl = builtins.fetchGit {
+    url = "https://github.com/wolfSSL/wolfssl.git";
+    ref = "refs/tags/v5.6.3-stable";
+  };
+
   shellHook =
     ''
       cp -r $msdk $PWD/msdk
       chmod -R u+rwX,go+rX,go-w $PWD/msdk
       export MAXIM_PATH=$PWD/msdk
+
+      ## MIT configs ##
+
+      cp -r $wolfssl $PWD/wolfssl
+      chmod -R u+rwX,go+rX,go-w $PWD/wolfssl
+
+      cp -r $sha256_literal $PWD/sha256_literal
+      chmod -R u+rwX,go+rX,go-w $PWD/sha256_literal
+      sed -i 's/-std=c++11/-std=c++14/g' $PWD/msdk/Libraries/CMSIS/Device/Maxim/GCC/gcc.mk
     '';
 }

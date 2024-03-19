@@ -11,7 +11,39 @@
 
 # **********************************************************
 
-# Add your config here!
+# ****************** MIT Config *******************
+
+VPATH+=../common
+IPATH+=../common/include
+
+VPATH+=../wolfssl/wolfcrypt/src
+IPATH+=../wolfssl
+
+# Enable ChaCha20Poly1305 in wolfSSL
+PROJ_CFLAGS += -DHAVE_CHACHA
+PROJ_CFLAGS += -DHAVE_POLY1305
+
+# wolfSSL hardening
+PROJ_CFLAGS += -DTFM_TIMING_RESISTANT
+PROJ_CFLAGS += -DECC_TIMING_RESISTANT
+PROJ_CFLAGS += -DWC_RSA_BLINDING
+
+
+#################################################
+## From eCTF Crypto Example in Makefile
+PROJ_CFLAGS += -DMXC_ASSERT_ENABLE
+
+PROJ_CFLAGS += -DNO_WOLFSSL_DIR
+PROJ_CFLAGS += -DWOLFSSL_AES_DIRECT
+#PROJ_CFLAGS += -DCRYPTO_EXAMPLE=1
+
+# From https://www.wolfssl.com/documentation/manuals/wolfssl/chapter02.html#building-with-gcc-arm
+PROJ_CFLAGS += -DHAVE_PK_CALLBACKS
+PROJ_CFLAGS += -DWOLFSSL_USER_IO
+PROJ_CFLAGS += -DNO_WRITEV -DTIME_T_NOT_64BIT
+#################################################
+
+# **********************************************************
 
 # This example is only compatible with the FTHR board,
 # so we override the BOARD value to hard-set it.

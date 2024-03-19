@@ -22,7 +22,7 @@
  * 
  * Initiailize the underlying i2c simple interface
 */
-void board_link_init(void) {
+void board_link_init_ap(void) {
     i2c_simple_controller_init();
 }
 

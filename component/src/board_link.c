@@ -42,14 +42,43 @@ i2c_addr_t component_id_to_i2c_addr(uint32_t component_id) {
 /**
  * @brief Send a packet to the AP and wait for ACK
  * 
- * @param message: uint8_t*, message to be sent
+ * @param packet: mit_packet_t*, packet to be sent
  * 
  * This function utilizes the simple_i2c_peripheral library to
  * send a packet to the AP and wait for the message to be received
 */
-void send_packet_and_ack(uint8_t len, uint8_t* packet) {
+void send_packet_and_ack(mit_packet_t * packet) {
+    uint8_t len = sizeof(mit_ad_t) + sizeof(mit_authtag_t) + packet->ad.len;
     I2C_REGS[TRANSMIT_LEN][0] = len;
     memcpy((void*)I2C_REGS[TRANSMIT], (void*)packet, len);
+    I2C_REGS[TRANSMIT_DONE][0] = false;
+
+    // Wait for ack from AP
+    while(!I2C_REGS[TRANSMIT_DONE][0]);
+    I2C_REGS[RECEIVE_DONE][0] = false;
+}
+
+void send_scan_and_ack(mit_comp_id_t component_id) {
+    I2C_REGS[TRANSMIT_LEN][0] = sizeof(mit_comp_id_t);
+    memcpy((void *)I2C_REGS[TRANSMIT], &component_id, sizeof(mit_comp_id_t));
+    I2C_REGS[TRANSMIT_DONE][0] = false;
+
+    // Wait for ack from AP
+    while(!I2C_REGS[TRANSMIT_DONE][0]);
+    I2C_REGS[RECEIVE_DONE][0] = false;
+}
+
+/**
+ * @brief Send a null packet to the AP
+ * 
+ * This function utilizes the simple_i2c_peripheral library to
+ * send a bad packet to the AP.
+*/
+void send_ack(void) {
+    // Send 0xff, which will always get parsed as an invalid packet,
+    // in case the receiving end has bad rx buffer management.
+    I2C_REGS[TRANSMIT_LEN][0] = 1;
+    I2C_REGS[TRANSMIT][0] = 0xff; // invalid opcode
     I2C_REGS[TRANSMIT_DONE][0] = false;
 
     // Wait for ack from AP
